@@ -1287,6 +1287,268 @@ function leerRecibo(textos) {
   return {leerRecibo};
 })();
 
+// ---------- lector por posición: lee cada palabra del recibo con su lugar en la hoja y comprueba los importes entre sí ----------
+const RECIBO = (() => {
+// ---------- lectura de recibos: preparar imagen, ordenar palabras y entender el recibo ----------
+const RE_AMT = /^-?\d{1,3}(?:[.,]\d{3})*[.,]\d{2}$|^-?\d+[.,]\d{2}$/;
+const sinTildes = s => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+// números del recibo: 666,465.60 o 666.465,60 (el último separador con 2 dígitos es el decimal)
+function numRecibo(t) {
+  t = String(t == null ? "" : t).replace(/[^\d.,-]/g, "");
+  if (!/\d/.test(t)) return NaN;
+  const i = Math.max(t.lastIndexOf("."), t.lastIndexOf(","));
+  if (i >= 0 && t.length - i - 1 === 2) return parseFloat(t.slice(0, i).replace(/[.,]/g, "") + "." + t.slice(i + 1));
+  return parseFloat(t.replace(/[.,]/g, ""));
+}
+const cerca = (a, b, tol = 0.02) => Math.abs(a - b) <= tol;
+const aFecha = s => { const m = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s || ""); return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : ""; };
+
+// gris + parejo el fondo (sombras, hojas dobladas): divide cada pixel por el promedio de su alrededor. Escribe sobre rgba.
+function normalizarGris(rgba, w, h) {
+  const n = w * h, g = new Uint8Array(n);
+  for (let i = 0, j = 0; i < n; i++, j += 4) g[i] = (299 * rgba[j] + 587 * rgba[j + 1] + 114 * rgba[j + 2]) / 1000;
+  const W1 = w + 1, I = new Uint32Array(W1 * (h + 1));
+  for (let y = 0; y < h; y++) { let fila = 0; for (let x = 0; x < w; x++) { fila += g[y * w + x]; I[(y + 1) * W1 + x + 1] = I[y * W1 + x + 1] + fila; } }
+  const r = Math.max(12, Math.round(w * 0.012));
+  for (let y = 0; y < h; y++) {
+    const y0 = Math.max(0, y - r), y1 = Math.min(h, y + r + 1);
+    for (let x = 0; x < w; x++) {
+      const x0 = Math.max(0, x - r), x1 = Math.min(w, x + r + 1);
+      const m = (I[y1 * W1 + x1] - I[y0 * W1 + x1] - I[y1 * W1 + x0] + I[y0 * W1 + x0]) / ((x1 - x0) * (y1 - y0));
+      let v = m > 1 ? g[y * w + x] / m * 255 : 255;
+      v = v >= 255 ? 255 : (v - 40) * 255 / 215;
+      v = v < 0 ? 0 : v > 255 ? 255 : v;
+      const o = (y * w + x) * 4; rgba[o] = rgba[o + 1] = rgba[o + 2] = v; rgba[o + 3] = 255;
+    }
+  }
+  return rgba;
+}
+
+// ---------- palabras → renglones ----------
+function mediana(a) { const s = a.slice().sort((x, y) => x - y); return s.length ? s[s.length >> 1] : 0; }
+function prepararPalabras(words) {
+  let W = words.map(w => ({t: String(w.t).trim(), x0: w.x0, y0: w.y0, x1: w.x1, y1: w.y1})).filter(w => w.t);
+  W.forEach(w => { w.yc = (w.y0 + w.y1) / 2; w.xc = (w.x0 + w.x1) / 2; w.h = Math.max(1, w.y1 - w.y0); });
+  // el OCR a veces parte "4,435.47" en "4,435" y "47": los vuelvo a juntar
+  const out = [], usados = new Set();
+  for (const a of W) {
+    if (usados.has(a)) continue;
+    if (/^\d{1,3}(?:[.,]\d{3})*[.,]?$/.test(a.t) && /\d{3}$/.test(a.t.replace(/[.,]$/, ""))) {
+      const b = W.find(x => !usados.has(x) && x !== a && /^\d{2}$/.test(x.t) && x.x0 - a.x1 >= -2 && x.x0 - a.x1 < a.h * 1.4 && Math.abs(x.yc - a.yc) < a.h * 0.6);
+      if (b) { usados.add(b); out.push({...a, t: a.t.replace(/[.,]$/, "") + "." + b.t, x1: b.x1, xc: (a.x0 + b.x1) / 2}); continue; }
+    }
+    out.push(a);
+  }
+  return out;
+}
+function lineas(W, tol) {
+  const s = W.slice().sort((a, b) => a.yc - b.yc), out = [];
+  for (const w of s) {
+    const L = out[out.length - 1];
+    if (L && Math.abs(w.yc - L.y) <= tol) { L.w.push(w); L.y = L.w.reduce((t, x) => t + x.yc, 0) / L.w.length; }
+    else out.push({y: w.yc, w: [w]});
+  }
+  out.forEach(L => { L.w.sort((a, b) => a.x0 - b.x0); L.txt = L.w.map(w => w.t).join(" "); });
+  return out;
+}
+const CLAVES = ["remunerativo", "descuentos", "descripcion", "normales", "antiguedad", "sueldo", "neto", "bruto", "codigo", "presentismo", "jubilacion", "sindicato", "composicion", "empleador", "legajo", "categoria"];
+function puntajeOrientacion(words) {
+  const t = sinTildes(words.map(w => w.t).join(" ")).toLowerCase();
+  return CLAVES.filter(k => t.includes(k)).length;
+}
+// CUIT / CUIL: el último dígito es de control (módulo 11): sirve para saber si el OCR lo leyó bien
+function cuitValido(c) {
+  const d = String(c).replace(/\D/g, ""); if (d.length !== 11) return false;
+  const p = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2]; let s = 0; for (let i = 0; i < 10; i++) s += +d[i] * p[i];
+  let v = 11 - (s % 11); if (v === 11) v = 0; if (v === 10) return false;
+  return v === +d[10];
+}
+const fmtCuit = d => { d = String(d).replace(/\D/g, ""); return d.slice(0, 2) + "-" + d.slice(2, 10) + "-" + d.slice(10); };
+// ¿el importe leído y el esperado difieren en a lo sumo 2 dígitos? (error típico del OCR: 6↔5, 1↔4, 0↔8…)
+const casiIgual = (leido, esperado) => {
+  const a = leido.toFixed(2).replace(/\D/g, ""), b = esperado.toFixed(2).replace(/\D/g, "");
+  if (a.length !== b.length) return false; let n = 0; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) n++;
+  return n >= 1 && n <= 2;
+};
+
+// ---------- el recibo ----------
+const DESC_RE = /jubilac|social|solidari|19032|insj|sindic|seguro\s*de?\s*vida|anses|obra\s*soc|reparto|repart|cuota|aporte/i;
+const ENCAB_RE = /descripci|c[oó]digo|^und\.?$|^base$|^monto$/i;
+const redondear = x => Math.round(x * 100) / 100;
+function interpretarRecibo(words) {
+  const W = prepararPalabras(words), res = {ok: false, avisos: [], filas: [], datos: {}};
+  if (W.length < 15) { res.avisos.push("Casi no pude leer texto en el archivo."); return res; }
+  const medH = mediana(W.map(w => w.h)), tolL = Math.max(6, medH * 0.6);
+  const sin = w => sinTildes(w.t).toLowerCase();
+
+  // anclas de la tabla: "Composición salarial" abajo y el segundo encabezado "Descripción" arriba (el primero es el del empleador)
+  const yComp = W.filter(w => /^composici/.test(sin(w))).sort((a, b) => a.yc - b.yc)[0];
+  const descs = W.filter(w => /^descripci/.test(sin(w))).sort((a, b) => a.yc - b.yc);
+  if (!yComp) { res.avisos.push("No encontré la tabla de haberes y descuentos. ¿Está entera y bien girada la foto?"); return res; }
+  const encab = descs.filter(w => w.yc < yComp.yc).pop();
+  const nor = W.filter(w => /^normales/.test(sin(w)) && w.yc < yComp.yc).sort((a, b) => a.yc - b.yc)[0];
+  if (!encab && !nor) { res.avisos.push("No encontré la tabla de haberes y descuentos. ¿Está entera y bien girada la foto?"); return res; }
+  const y0 = encab ? encab.yc + medH * 0.15 : nor.yc - medH * 1.8, y1 = yComp.yc - medH * 0.3;
+  const enRegion = W.filter(w => w.yc > y0 && w.yc < y1);
+
+  // columna "Monto": el grupo de importes más a la derecha
+  const imp = enRegion.filter(w => RE_AMT.test(w.t.replace(/\s/g, "")));
+  const grupos = []; imp.slice().sort((a, b) => a.x1 - b.x1).forEach(w => {
+    const g = grupos[grupos.length - 1];
+    if (g && w.x1 - g.x1max < medH * 4) { g.w.push(w); g.x1max = w.x1; } else grupos.push({w: [w], x1max: w.x1});
+  });
+  const col = grupos.filter(g => g.w.length >= 3).pop();
+  if (!col) { res.avisos.push("No encontré la columna de montos."); return res; }
+  const montos = col.w.slice().sort((a, b) => a.yc - b.yc), esMonto = new Set(montos);
+
+  // renglones de concepto: los que tienen una palabra de texto (sin encabezados)
+  const resto = enRegion.filter(w => !esMonto.has(w));
+  const rows = lineas(resto, tolL).filter(L => {
+    const letras = L.w.filter(w => /[A-Za-zÁÉÍÓÚáéíóúÑñ]{2,}/.test(w.t));
+    return letras.length && !L.w.some(w => ENCAB_RE.test(sin(w)));
+  });
+  let par = [];
+  if (rows.length === montos.length) par = rows.map((L, i) => [L, montos[i]]);
+  else {
+    res.avisos.push(`Vi ${rows.length} conceptos y ${montos.length} importes: emparejé por posición, revisá los datos.`);
+    const k = Math.min(rows.length, montos.length), off = mediana(Array.from({length: k}, (_, i) => montos[i].yc - rows[i].y));
+    const sp = rows.length > 1 ? mediana(rows.slice(1).map((L, i) => L.y - rows[i].y)) : medH * 2, libres = montos.slice();
+    rows.forEach(L => {
+      let mejor = -1, d = sp * 0.8;
+      libres.forEach((m, j) => { const dd = Math.abs(m.yc - (L.y + off)); if (dd < d) { d = dd; mejor = j; } });
+      if (mejor >= 0) par.push([L, libres.splice(mejor, 1)[0]]);
+    });
+  }
+  for (const [L, m] of par) {
+    const codTok = L.w.find(w => /^\d{1,4}$/.test(w.t.replace(/[|\[\]]/g, "")));
+    const codigo = codTok ? parseInt(codTok.t.replace(/[|\[\]]/g, ""), 10) : null;
+    const desc = L.w.filter(w => /[A-Za-zÁÉÍÓÚáéíóúÑñ%]/.test(w.t)).map(w => w.t).join(" ");
+    const und = L.w.map(w => w.t).filter(t => /^\d{1,3}[.,]\d{2}$/.test(t)).map(numRecibo)[0];
+    const tieneBase = L.w.some(w => RE_AMT.test(w.t) && numRecibo(w.t) >= 1000);
+    res.filas.push({codigo, desc, und: und == null ? null : und, monto: numRecibo(m.t), tieneBase, crudo: m.t});
+  }
+
+  // clasifico cada renglón
+  const H = {}, D = [], otros = [];
+  let norem = 0, hayRedondeo = false, yaDescuentos = false;
+  for (const f of res.filas) {
+    const d = sinTildes(f.desc).toLowerCase();
+    if (/redondeo/.test(d) || f.codigo === 6001) { hayRedondeo = true; continue; }
+    if ((f.codigo >= 3000 && f.codigo < 4000) || DESC_RE.test(d) || f.tieneBase || yaDescuentos) { yaDescuentos = true; D.push(f); continue; }
+    if (f.codigo >= 4000 && f.codigo < 5000) continue;                    // aportes del empleador: se ignoran
+    if (/no\s*rem|norem/.test(d)) { norem += f.monto; continue; }
+    const set = k => { if (H[k]) otros.push(f); else H[k] = f; };
+    if (/normal/.test(d)) set("n");
+    else if (/feriad/.test(d)) set("f");
+    else if (/100/.test(d)) set("h100");
+    else if (/50/.test(d)) set("h50");
+    else if (/present/.test(d)) set("pres");
+    else if (/premio|camcul|pr\s*cam|asisten/.test(d)) set("premio");
+    else if (/adic.*t[ií]tulo|titulo/.test(d)) set("adic");
+    else if (/antig/.test(d)) set("antig");
+    else otros.push(f);
+  }
+  const R = res.datos;
+  if (!H.n) { res.avisos.push("No encontré las horas normales. Esta lectura funciona con recibos por hora."); return res; }
+
+  // totales impresos (debajo de "Composición salarial")
+  const detalle = W.filter(w => /^detalle/.test(sin(w)) && w.yc > yComp.yc).sort((a, b) => a.yc - b.yc)[0];
+  const son = W.filter(w => /^pesos/.test(sin(w)) && w.yc > yComp.yc).sort((a, b) => a.yc - b.yc)[0];
+  const fines = [detalle && detalle.yc, son && son.yc + medH * 1.5].filter(Boolean);
+  const bandaFin = fines.length ? Math.min(...fines) : yComp.yc + medH * 9;
+  const banda = W.filter(w => RE_AMT.test(w.t) && w.yc > yComp.yc && w.yc < bandaFin);
+  const T = [...new Set(banda.map(w => numRecibo(w.t)))];
+  if (T.length >= 2) R.remImpreso = Math.max(...T);
+  // reparación de un importe mal leído: si la suma de los haberes no da el total impreso y UN importe
+  // cambiando 1-2 dígitos lo arregla, se corrige
+  const remFilas = [H.n, H.f, H.h50, H.h100, H.pres, H.premio, H.adic, H.antig].filter(Boolean);
+  if (R.remImpreso) {
+    const suma = remFilas.reduce((s, f) => s + f.monto, 0);
+    if (!cerca(suma, R.remImpreso)) {
+      for (const f of remFilas) {
+        const necesario = redondear(R.remImpreso - (suma - f.monto));
+        if (necesario > 0 && casiIgual(f.monto, necesario)) { res.avisos.push(`Corregí un importe dudoso de "${f.desc}": ${f.crudo} → ${necesario.toFixed(2)}.`); f.monto = necesario; break; }
+      }
+    }
+  }
+  // valor de la hora y horas (se comprueban con los importes)
+  const multiplo = x => Math.abs(x * 4 - Math.round(x * 4)) < 0.03;
+  let vh = H.n.und ? H.n.monto / H.n.und : NaN;
+  const hdr = W.filter(w => /jornal/.test(sin(w)))[0];
+  if (hdr) {
+    const c = W.filter(w => RE_AMT.test(w.t) && w.yc > hdr.yc && w.yc < hdr.yc + medH * 4 && Math.abs(w.xc - hdr.xc) < medH * 6)[0];
+    if (c) { const v = numRecibo(c.t); if (v > 100 && v < 100000 && multiplo(H.n.monto / v)) vh = v; }
+  }
+  if (!(vh > 0)) { res.avisos.push("No pude calcular el valor de la hora."); return res; }
+  R.vh = redondear(vh);
+  const horas = (f, mult) => { if (!f) return 0; const x = f.monto / (R.vh * mult); if (multiplo(x)) return Math.round(x * 4) / 4; res.avisos.push(`Las horas de "${f.desc}" no cierran con el importe.`); return f.und || 0; };
+  R.hsN = horas(H.n, 1); R.hsF = horas(H.f, 1); R.hs50 = horas(H.h50, 1.5); R.hs100 = horas(H.h100, 2);
+  const base = (R.hsN + R.hsF) * R.vh, pct = f => f ? redondear(f.monto / base * 100) : 0;
+  R.pres = pct(H.pres); R.premio = pct(H.premio); R.antig = pct(H.antig);
+  R.adic = H.adic ? H.adic.monto : 0; R.norem = redondear(norem);
+  R.redondeo = hayRedondeo;
+  R.rem = redondear(remFilas.reduce((s, f) => s + f.monto, 0));
+  R.baseBasica = (R.hsN + R.hsF) * R.vh + (R.antig ? base * R.antig / 100 : 0) + R.adic;
+  // descuentos: el porcentaje se deduce del importe (base × % = importe), con porcentajes "redondos";
+  // los que no encajan en ninguna base son importes fijos
+  const BASES = [["total", R.rem], ["basico", R.baseBasica]];
+  const redondo = p => p >= 0.1 && p <= 30 && Math.abs(p * 20 - Math.round(p * 20)) < 0.02;
+  R.desc = D.map(f => {
+    for (const [tipo, b] of BASES) {
+      const p = redondear(f.monto / b * 100);
+      if (redondo(p) && cerca(redondear(b * p / 100), f.monto, 0.03)) return {codigo: f.codigo, desc: f.desc, pct: p, base: tipo, monto: f.monto};
+    }
+    if (f.und != null) for (const [tipo, b] of BASES) {      // importe dudoso: ¿cierra con un % leído tocando 1-2 dígitos?
+      const esp = redondear(b * f.und / 100);
+      if (casiIgual(f.monto, esp)) { res.avisos.push(`Corregí un importe dudoso de "${f.desc}": ${f.crudo} → ${esp.toFixed(2)}.`); return {codigo: f.codigo, desc: f.desc, pct: f.und, base: tipo, monto: esp}; }
+    }
+    return {codigo: f.codigo, desc: f.desc, pct: null, base: null, monto: f.monto};
+  });
+  const sumDesc = R.desc.reduce((t, d) => t + d.monto, 0), esperado = R.rem + R.norem - sumDesc;
+  const cNeto = T.filter(v => Math.abs(v - esperado) < 1.2 && v !== R.remImpreso).sort((x, y) => Math.abs(x - esperado) - Math.abs(y - esperado))[0];
+  if (cNeto) R.netoImpreso = cNeto;
+  // mes y año a partir de las descripciones (ej. "Grat Extr NO REM Oct/26"), por si el encabezado no se leyó
+  const MM = {ene: 1, feb: 2, mar: 3, abr: 4, may: 5, jun: 6, jul: 7, ago: 8, sep: 9, oct: 10, nov: 11, dic: 12}, hall = [];
+  res.filas.forEach(f => { const re = /\b(ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)[a-z]{0,6}[\/.\-il|]?\s?(\d{2})\b/gi; let m; const t = sinTildes(f.desc); while ((m = re.exec(t))) if (+m[2] >= 20 && +m[2] <= 40) hall.push({a: 2000 + +m[2], m: MM[m[1].toLowerCase()]}); });
+  if (hall.length) { const vot = {}; hall.forEach(h => vot[h.a] = (vot[h.a] || 0) + 1); const an = +Object.keys(vot).sort((x, y) => vot[y] - vot[x] || y - x)[0]; R.anioDesc = an; R.mesDesc = Math.max(...hall.filter(h => h.a === an).map(h => h.m)); }
+  otros.forEach(f => res.avisos.push(`No sé dónde cargar "${f.desc}" ($ ${f.monto.toFixed(2)}); no lo sumé.`));
+
+  // encabezado: período y datos del recibo
+  const limiteTop = descs.length > 1 ? descs[0].yc - medH : (encab ? encab.yc - medH * 8 : y0 - medH * 8);
+  const top = W.filter(w => w.yc < limiteTop);
+  const txtTop = lineas(top, tolL), todo = txtTop.map(L => L.txt).join("\n");
+  const anio = top.filter(w => /^20[2-3]\d$/.test(w.t)).sort((a, b) => a.yc - b.yc)[0];
+  if (anio) {
+    const izq = top.filter(w => Math.abs(w.yc - anio.yc) < medH * 1.3 && w.x1 < anio.x0 && /^\d{1,2}$/.test(w.t)).sort((a, b) => b.x0 - a.x0);
+    const mes = izq[0] ? +izq[0].t : NaN, q = izq[1] ? +izq[1].t : NaN;
+    if (mes >= 1 && mes <= 12) R.per = `${anio.t}-${String(mes).padStart(2, "0")}`;
+    if (q >= 0 && q <= 2) R.quin = q;
+  }
+  if (R.per && R.anioDesc && +R.per.slice(0, 4) !== R.anioDesc) R.per = R.anioDesc + R.per.slice(4);
+  const P = {};
+  const m1 = /Fecha:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i.exec(todo); if (m1) P.fechaPago = aFecha(m1[1]);
+  const fechas = [...todo.matchAll(/\d{1,2}\/\d{1,2}\/\d{4}/g)].map(m => m[0]);
+  const ing = fechas.find(f => !m1 || f !== m1[1]); if (ing) P.ingreso = aFecha(ing);
+  const lap = /Lapso:?\s*(\d{1,2}\/\d{4})/i.exec(todo); if (lap) P.lapso = lap[1].replace(/^(\d)\//, "0$1/");
+  const ban = /Banco:?\s*([A-Za-zÁÉÍÓÚáéíóúñÑ.\-]{3,30})/.exec(todo); if (ban) P.banco = ban[1].trim();
+  const cu = [...todo.matchAll(/(?<!\d)(\d{2})-?(\d{8})-?(\d)(?!\d)/g)].map(m => m[1] + m[2] + m[3]).filter(cuitValido);
+  const cuit = cu.find(c => /^(30|33|34)/.test(c)), cuil = cu.find(c => /^(20|23|24|27)/.test(c));
+  if (cuit) P.cuit = fmtCuit(cuit); if (cuil) P.cuil = fmtCuit(cuil);
+  const an = /(\d+)\s*a[ñn]o\S*\s*y\s*(\d+)\s*mes\S*/i.exec(todo); if (an) P.antig = `${an[1]} ${+an[1] === 1 ? "año" : "años"} y ${an[2]} ${+an[2] === 1 ? "mes" : "meses"}`;
+  const lu = /Acreditaci[oó]n[^\n]{0,25}/i.exec(todo); if (lu) P.lugar = lu[0].replace(/\s+\S*\d.*$/, "").trim();
+  const nom = /([A-ZÁÉÍÓÚÑ]{3,}(?: [A-ZÁÉÍÓÚÑ]{2,})*,\s*[A-ZÁÉÍÓÚÑ]{3,}(?: [A-ZÁÉÍÓÚÑ]{3,})*)/.exec(todo);
+  if (nom) P.nombre = nom[1];
+  const iCuit = txtTop.findIndex(L => /CUIT/i.test(L.txt));
+  if (iCuit >= 2) { P.empresa = txtTop[iCuit - 2].txt.replace(/[^\wÁÉÍÓÚáéíóúñÑ .&,-]/g, "").trim(); P.domicilio = txtTop[iCuit - 1].txt.replace(/[^\wÁÉÍÓÚáéíóúñÑ .,-]/g, "").trim(); }
+  R.pdf = P;
+  res.ok = true;
+  return res;
+}
+
+
+return {interpretar: interpretarRecibo, normalizarGris, numRecibo, cerca, redondear};
+})();
+
 // ---------- cargar los datos desde una foto o PDF del recibo ----------
 const LIBS = {
   tess: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",
@@ -1303,8 +1565,8 @@ const impMsg = (txt, err) => { const m = $("impMsg"); m.hidden = !txt; if (txt) 
 const CLAVES = /normales|remunerativo|descuentos|sueldo neto|jubilac|presentism|empleador|son pesos|antigued/gi;
 let PASO = "";
 
-function aCanvas(bmp, ang, maxLado) {                    // achica la imagen y la gira (0, 90, 180 o 270 grados)
-  const k = Math.min(1, maxLado / Math.max(bmp.width, bmp.height)), w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
+function aCanvas(bmp, ang, maxLado, ampliar) {           // achica (o amplía) la imagen y la gira (0, 90, 180 o 270 grados)
+  const k = ampliar ? maxLado / Math.max(bmp.width, bmp.height) : Math.min(1, maxLado / Math.max(bmp.width, bmp.height)), w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
   const giro = ang % 180 !== 0, c = document.createElement("canvas");
   c.width = giro ? h : w; c.height = giro ? w : h;
   const x = c.getContext("2d", {willReadFrequently: true});
@@ -1372,8 +1634,73 @@ async function textosDeImagen(file) {
       if (pts > mejor.pts) mejor = {ang: giros[i], pts};
       if (i === 1 && mejor.pts >= 4) break;
     }
-    return await tresLecturas(w, aCanvas(bmp, mejor.ang, 2200));
+    return await lecturaImagen(w, bmp, mejor.ang);
   } finally { await w.terminate(); }
+}
+
+// Lectura principal de una foto: palabras con su posición. Se prueban hasta 3 tamaños y se queda con la que cierra
+// (la suma de los haberes tiene que dar el total remunerativo impreso). Si ninguna cierra, plan B: lectura por texto.
+function normalizarCanvas(c) {
+  const x = c.getContext("2d", {willReadFrequently: true}), d = x.getImageData(0, 0, c.width, c.height);
+  RECIBO.normalizarGris(d.data, c.width, c.height);
+  x.putImageData(d, 0, 0); return c;
+}
+function palabrasDe(data) {
+  const ws = data.words || (data.blocks || []).flatMap(b => (b.paragraphs || []).flatMap(p => (p.lines || []).flatMap(l => l.words || [])));
+  return ws.filter(x => x && x.bbox).map(x => ({t: x.text, x0: x.bbox.x0, y0: x.bbox.y0, x1: x.bbox.x1, y1: x.bbox.y1}));
+}
+function reciboDePalabras(palabras) {
+  const res = RECIBO.interpretar(palabras);
+  if (!res.ok) return null;
+  const d = res.datos, r = {avisos: res.avisos.slice(), vh: d.vh, hsN: d.hsN, hsF: d.hsF, hs50: d.hs50, hs100: d.hs100, pres: d.pres, premio: d.premio, antig: d.antig, adic: d.adic, norem: d.norem, netoRecibo: d.netoImpreso || null, desc: d.desc || [], redondeo: !!d.redondeo};
+  r.confiable = !!d.remImpreso && RECIBO.cerca(d.rem, d.remImpreso) && !res.avisos.some(a => /^(Vi \d+|Las horas)/.test(a));
+  if (!r.confiable) r.desc = [];                      // si la lectura no cerró, no se tocan tus descuentos
+  if (d.per) { r.anio = +d.per.slice(0, 4); r.mes = +d.per.slice(5); } else if (d.mesDesc) { r.anio = d.anioDesc; r.mes = d.mesDesc; }
+  if (d.quin != null) r.quin = d.quin;
+  if (r.mes == null) r.avisos.push("No pude leer el mes y la quincena: elegilos vos.");
+  else if (r.quin == null) r.avisos.push("No pude leer la quincena: elegila vos.");
+  return r;
+}
+const KW_DESC = [/jubilac|repar/, /19032|\bley\b|ins\W{0,2}[sj]/, /social|osde/, /solidari/, /sindic|cuota/, /vida/];
+const NOM_DESC = ["Jubilación", "Ley 19032 INSSJP", "Obra social", "Fondo solidario", "Sindicato", "Seguro de vida"];
+const sinAc = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const RE_UOM = /\bu\.?\s?o\.?\s?m\b/;
+function limpiarNombre(t) {
+  const x = String(t || "").replace(/^[\s|\[\]\d]+/, "").replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ0-9.%\s]/g, " ").replace(/\s+/g, " ").trim();
+  return (x.match(/[A-Za-zÁÉÍÓÚáéíóúñÑ]/g) || []).length >= 4 ? x : "Descuento";
+}
+// descuentos del recibo -> formato de la configuración. Si es un recibo de UOM se usan tus nombres y códigos de siempre;
+// si es de otra empresa, nombres neutros (el OCR suele leer mal los nombres) y los códigos que traiga el recibo
+function descDeRecibo(r, q) {
+  const esUOM = r.desc.some(d => RE_UOM.test(sinAc(d.desc))), base = CFG0.desc.concat(CFG0.fijos), out = {desc: [], fijos: [], items: []};
+  r.desc.forEach(d => {
+    const t = sinAc(d.desc), i = KW_DESC.findIndex(k => k.test(t));
+    let n, c = d.codigo >= 3000 && d.codigo < 4000 ? String(d.codigo) : "";
+    if (i >= 0) {
+      const u = base.find(a => KW_DESC[i].test(sinAc(a.n)));
+      if (esUOM && u) { n = u.n; c = u.c || ""; }
+      else n = NOM_DESC[i] + (RE_UOM.test(t) ? " UOM" : "") + (i === 0 && /repar/.test(t) ? " Reparto" : "");
+    } else n = limpiarNombre(d.desc);
+    out.items.push({n, d});
+    if (d.pct != null) out.desc.push({n, p: d.pct, b: d.base, c});
+    else out.fijos.push({n, m: d.monto, q, c});
+  });
+  return out;
+}
+async function lecturaImagen(w, bmp, ang) {
+  const escalas = [2600, 2400, 2800];
+  let parcial = null;
+  await w.setParameters({tessedit_pageseg_mode: "11", user_defined_dpi: "300"});
+  for (let i = 0; i < escalas.length; i++) {
+    PASO = "Leyendo el recibo (" + (i + 1) + " de " + escalas.length + ")…";
+    const r = reciboDePalabras(palabrasDe((await w.recognize(normalizarCanvas(aCanvas(bmp, ang, escalas[i], true)))).data));
+    if (r && r.confiable) return r;
+    if (r && r.vh && !parcial) parcial = r;
+  }
+  const t = LECTOR.leerRecibo(await tresLecturas(w, aCanvas(bmp, ang, 2200)));
+  if (t.vh) return t;
+  if (parcial) { parcial.avisos.unshift("No pude confirmar todos los datos con los totales del recibo: revisalos bien antes de completar."); return parcial; }
+  return t;
 }
 async function textosDePdf(file) {
   impMsg("Abriendo el PDF…");
@@ -1416,6 +1743,10 @@ function mostrarImp(r) {
     if (r.adic != null) h.push(filaImp("Adicional de título", r.adic ? money(r.adic) : "no cobrás"));
     if (r.norem != null) h.push(filaImp("Sumas no remunerativas", money(r.norem)));
   }
+  if (r.desc && r.desc.length) {
+    h.push('<p class="nota" style="margin:10px 0 2px"><b>Descuentos de este recibo</b> (reemplazan los que tenés cargados)</p>');
+    descDeRecibo(r, 0).items.forEach(x => h.push(filaImp(esc(x.n) + (x.d.pct != null ? " " + String(x.d.pct).replace(".", ",") + "%" : " <small>(importe fijo)</small>"), money(x.d.monto))));
+  }
   if (r.netoRecibo) h.push(filaImp("Neto que dice el recibo", money(r.netoRecibo)));
   const av = r.avisos.map(a => '<p class="aviso">' + a.replace(/</g, "&lt;") + '</p>').join("");
   const sirve = !!r.vh;
@@ -1436,6 +1767,11 @@ function aplicarImp(r) {
   set("presH", r.pres); set("premioH", r.premio); set("antigH", r.antig);
   if (r.adic != null) { $("adicOn").checked = r.adic > 0; if (r.adic > 0) set("adicH", r.adic); }
   set("norem", r.norem); set("otros", 0);
+  if (r.desc && r.desc.length) {                         // los descuentos del recibo reemplazan los de la configuración
+    const nd = descDeRecibo(r, parseInt(qElegida) || 0);
+    S.cfg.desc = nd.desc; S.cfg.fijos = nd.fijos; S.cfg.redondeo = !!r.redondeo;
+    pintarCfg(); guardar("cfg");
+  }
   todo();
   const c = calcSueldo();
   let msg, ok = true;
@@ -1456,7 +1792,7 @@ $("impFile").onchange = async e => {
   $("impBtn").disabled = true; $("impRes").hidden = true;
   try {
     const pdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name);
-    const res = LECTOR.leerRecibo(pdf ? await textosDePdf(f) : await textosDeImagen(f));
+    const res = pdf ? LECTOR.leerRecibo(await textosDePdf(f)) : await textosDeImagen(f);
     impMsg(null); mostrarImp(res);
   } catch (err) { impMsg("No pude leer el recibo: " + (err && err.message || err), true); }
   finally { $("impBtn").disabled = false; }
