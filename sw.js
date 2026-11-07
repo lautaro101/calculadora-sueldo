@@ -1,6 +1,6 @@
 /* Service worker de "Cuánto voy a cobrar": deja usar la app sin conexión.
    Si cambiás index.html, subí el archivo y listo: con internet siempre baja la versión nueva. */
-const V = "calc-sueldo-v3";
+const V = "calc-sueldo-v6";
 const SHELL = ["./", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {

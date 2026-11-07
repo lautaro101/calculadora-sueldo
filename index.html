@@ -39,14 +39,22 @@
   --on:#fcfdf9;         /* botón activo de pestañas y opciones */
 }
 @media (prefers-color-scheme:dark){
-  :root{
+  :root:not([data-tema="claro"]){
     --paper:#0f161d;--sheet:#18212b;--ink:#e7edf2;--mut:#98a5b1;--line:#2a3642;--fill:#202b36;
     --navy:#203c63;--net:#74cba5;--net-bg:#1b362d;--desc:#ee9a82;--warn:#f0d58e;--warn-bg:#3a2f12;--focus:#7aa8f0;--on:#364a60;
   }
 }
+:root[data-tema="oscuro"]{
+    --paper:#0f161d;--sheet:#18212b;--ink:#e7edf2;--mut:#98a5b1;--line:#2a3642;--fill:#202b36;
+    --navy:#203c63;--net:#74cba5;--net-bg:#1b362d;--desc:#ee9a82;--warn:#f0d58e;--warn-bg:#3a2f12;--focus:#7aa8f0;--on:#364a60;
+}
+html[data-tema="claro"]{color-scheme:light}
+html[data-tema="oscuro"]{color-scheme:dark}
+html[data-letra="1"]{font-size:112.5%}
+html[data-letra="2"]{font-size:125%}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;color-scheme:light dark}
-body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.45 var(--sans);font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 1rem/1.45 var(--sans);font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 [hidden]{display:none!important}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 
@@ -169,6 +177,11 @@ input:disabled{opacity:.45}
 .bar div{max-width:1040px;margin:0 auto;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
 .bar span{font-size:.88rem;opacity:.85}
 .bar b{font:800 1.65rem/1 var(--disp);letter-spacing:-.02em}
+.hwhy .r span:first-child{min-width:0}
+.hwhy .up{color:var(--net)}.hwhy .dn{color:var(--desc)}
+#impRes{margin-top:12px;padding:12px;border:1.5px solid var(--line);border-radius:12px;background:var(--sheet)}
+#impRes .aviso{margin:8px 0 0}
+#impMsg{margin-top:10px}
 .syrow{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:10px 0;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--sheet)}
 .syrow b{display:block}
 .syrow small{color:var(--mut);font-size:.8rem}
@@ -234,6 +247,15 @@ input:disabled{opacity:.45}
   </div>
 
   <form class="form" onsubmit="return false" autocomplete="off">
+    <section class="grp" id="g-imp">
+      <h2>Cargar desde tu recibo</h2>
+      <p class="sub">Sacale una foto al recibo o elegí el PDF: se leen solo tus datos (el costo del empleador no se usa) y completan la calculadora. Se lee en tu dispositivo y el recibo no se sube a ningún lado.</p>
+      <button type="button" class="btn alt" id="impBtn">Subir foto o PDF del recibo</button>
+      <input type="file" id="impFile" accept="image/*,application/pdf" hidden>
+      <div id="impMsg" hidden></div>
+      <div id="impRes" hidden></div>
+    </section>
+
     <section class="grp">
       <h2>Qué querés calcular</h2>
       <div class="fld"><label for="per">Mes</label><input type="month" id="per"></div>
@@ -312,6 +334,8 @@ input:disabled{opacity:.45}
       <button type="button" class="btn2" data-hv="met:neto">Neto</button><button type="button" class="btn2" data-hv="met:bruto">Bruto</button>
     </div>
     <div id="hSum"></div>
+    <div id="hWhy" class="hwhy"></div>
+    <div id="hAlert"></div>
     <div id="hChart"></div>
     <div id="hList"></div>
     <p class="nota" id="hNota"></p>
@@ -406,6 +430,17 @@ input:disabled{opacity:.45}
 </details>
 
 <!-- ============================ PARÁMETROS ============================ -->
+<details class="cfg" id="aparBox">
+  <summary>Apariencia</summary>
+  <div class="fld"><span class="lab" id="lTema">Tema</span>
+    <div class="seg" role="radiogroup" aria-labelledby="lTema" data-for="tema">
+      <button type="button" role="radio" data-v="">Automático</button><button type="button" role="radio" data-v="claro">Claro</button><button type="button" role="radio" data-v="oscuro">Oscuro</button></div></div>
+  <div class="fld"><span class="lab" id="lLetra">Tamaño de letra</span>
+    <div class="seg" role="radiogroup" aria-labelledby="lLetra" data-for="letra">
+      <button type="button" role="radio" data-v="0">Normal</button><button type="button" role="radio" data-v="1">Grande</button><button type="button" role="radio" data-v="2">Muy grande</button></div></div>
+  <select id="tema" hidden><option value="">auto</option><option value="claro">claro</option><option value="oscuro">oscuro</option></select>
+  <select id="letra" hidden><option value="0">0</option><option value="1">1</option><option value="2">2</option></select>
+</details>
 <details class="cfg" id="cfgBox">
   <summary>Descuentos y parámetros</summary>
   <p class="sub">Vienen cargados con los de un recibo UOM real. En "Sobre el básico" entran las horas normales, la antigüedad y el adicional fijo; no entran las horas extra, el presentismo ni el premio. Así se calcula la cuota sindical. Si el tuyo tiene otros, corregilos acá.</p>
@@ -601,6 +636,9 @@ $("guardar").onclick = () => {
   if (c.quin === 1) { h.a = t; h.n1 = c.neto; }
   if (c.quin === 2) { h.b = t; h.n2 = c.neto; }
   if (c.quin === 0) { h.n1 = h.n2 = null; }
+  h.det = h.det || {};
+  h.det[c.quin] = {rem: Object.fromEntries(c.rem.map(x => [x[0], [x[2], x[4] === "" || x[4] == null ? null : +x[4]]])), nr: c.totalNorem, td: c.totalDesc, tr: c.totalRem, neto: c.neto};
+  if (c.quin === 0) { delete h.det[1]; delete h.det[2]; }
   h.t = Date.now(); guardar(); pintarSueldo(); pintarMeses(); pintarSac();
   const ok = $("okGuardado"); ok.hidden = false;
   ok.textContent = `Guardado para el SAC: ${c.quin ? quinTxt(c.quin).toLowerCase() + " de " : ""}${etiqueta(per)}.`;
@@ -951,6 +989,500 @@ $("tab-sac").addEventListener("input", e => {
 });
 $("sacSem").onchange = () => { pintarMeses(); pintarSac(); };
 
+
+
+// ---------- por qué cambió el cobro y avisos de recibos raros ----------
+const mediana = a => { const t = a.slice().sort((x, y) => x - y), m = t.length >> 1; return t.length % 2 ? t[m] : (t[m - 1] + t[m]) / 2; };
+const unidTxt = (l, u) => u == null ? "" : fmt.format(u).replace(/,00$/, "") + (/^Horas/.test(l) ? " hs" : /Presentismo|Premio/.test(l) ? "%" : "");
+const signo = d => (d > 0 ? "+" : MENOS) + money(Math.abs(d));
+function sumaDet(a, b) {                                  // un mes = dos quincenas
+  const rem = {};
+  [a, b].forEach(d => Object.keys(d.rem).forEach(l => { rem[l] = [(rem[l] ? rem[l][0] : 0) + d.rem[l][0], null]; }));
+  return {rem, nr: a.nr + b.nr, td: a.td + b.td, tr: a.tr + b.tr, neto: a.neto + b.neto};
+}
+function detPunto(p) {
+  const d = (S.hist[p.per] || {}).det || {};
+  if (p.q) return d[p.q] || null;
+  return d[0] || (d[1] && d[2] ? sumaDet(d[1], d[2]) : null);
+}
+function explicarCambio(da, db, bruto) {
+  const ch = [];
+  new Set(Object.keys(da.rem).concat(Object.keys(db.rem))).forEach(l => {
+    const a = da.rem[l], b = db.rem[l], d = r2((b ? b[0] : 0) - (a ? a[0] : 0));
+    if (Math.abs(d) < 1) return;
+    let det = !a ? "ahora aparece" : !b ? "ya no aparece" : "";
+    if (a && b && a[1] != null && b[1] != null && a[1] !== b[1]) det = unidTxt(l, a[1]) + " → " + unidTxt(l, b[1]);
+    ch.push([l, det, d]);
+  });
+  if (!bruto) {
+    const nr = r2(db.nr - da.nr), td = r2(db.td - da.td);
+    if (Math.abs(nr) >= 1) ch.push(["Sumas no remunerativas", "", nr]);
+    if (Math.abs(td) >= 1) ch.push(["Descuentos", td > 0 ? "descontaron más" : "descontaron menos", -td]);
+  }
+  return ch.sort((x, y) => Math.abs(y[2]) - Math.abs(x[2]));
+}
+function alertasDe(det, comparables) {                    // compara un cobro con los anteriores parecidos
+  const prev = comparables.slice(-4);
+  if (prev.length < 2) return null;
+  const out = [], labels = new Set();
+  prev.forEach(d => Object.keys(d.rem).forEach(l => labels.add(l)));
+  Object.keys(det.rem).forEach(l => labels.add(l));
+  labels.forEach(l => {
+    const variable = /extra|feriado/i.test(l), con = prev.filter(d => d.rem[l] && d.rem[l][0] > 0).length, ahora = det.rem[l];
+    if (!ahora || !(ahora[0] > 0)) { if (!variable && con >= Math.max(2, Math.ceil(prev.length * .75))) out.push("Falta “" + l + "”, que venías cobrando."); return; }
+    if (!con) { if (!variable) out.push("Aparece “" + l + "”, que no tenías en tus cobros anteriores."); return; }
+    const us = prev.map(d => d.rem[l] && d.rem[l][1]).filter(u => u != null);
+    if (us.length >= 2 && ahora[1] != null && !variable) {
+      const m = mediana(us);
+      if (/^Horas/.test(l) ? m && Math.abs(ahora[1] - m) / m > .15 : Math.abs(ahora[1] - m) > .01)
+        out.push(/^Horas/.test(l) ? l + ": " + unidTxt(l, ahora[1]) + " contra unas " + unidTxt(l, m) + " de siempre." : l + " cambió de " + unidTxt(l, m) + " a " + unidTxt(l, ahora[1]) + ".");
+    }
+  });
+  const mn = mediana(prev.map(d => d.neto));
+  if (mn && Math.abs(det.neto - mn) / mn > .2) out.push("El neto es " + fmt.format(Math.abs(det.neto - mn) / mn * 100).replace(/,\d+$/, "") + "% " + (det.neto > mn ? "más alto" : "más bajo") + " que lo habitual (unos " + money(mn) + ").");
+  const rt = d => d.tr ? d.td / d.tr : 0, mr = mediana(prev.map(rt));
+  if (det.tr && Math.abs(rt(det) - mr) > .02) out.push("Los descuentos son el " + fmt.format(rt(det) * 100) + "% del bruto; lo habitual es " + fmt.format(mr * 100) + "%.");
+  return out.slice(0, 5);
+}
+function pintarPorque(out, last) {
+  const i = out.indexOf(last);
+  if (i < 1) return;
+  const bruto = HV.met !== "neto", da = detPunto(out[i - 1]), db = detPunto(last);
+  if (!da || !db) {
+    $("hWhy").innerHTML = '<p class="nota">Para ver por qué cambió el cobro hacen falta los dos guardados con la versión nueva de la app. Los que ya tenías guardados solo tienen el total.</p>';
+  } else {
+    const ch = explicarCambio(da, db, bruto).slice(0, 6);
+    $("hWhy").innerHTML = ch.length ? '<h3 style="margin:18px 0 2px;font-size:.95rem">Por qué cambió</h3>' + ch.map(c =>
+      '<div class="r"><span>' + esc(c[0]) + (c[1] ? ' <span class="d">' + esc(c[1]) + '</span>' : "") + '</span><span class="a ' + (c[2] > 0 ? "up" : "dn") + '">' + signo(c[2]) + '</span></div>').join("") : "";
+  }
+  if (db) {
+    const al = alertasDe(db, out.slice(0, i).filter(p => p.q === last.q).map(detPunto).filter(Boolean));
+    if (al) $("hAlert").innerHTML = al.length ? al.map(t => '<div class="aviso" style="margin-top:8px">' + esc(t) + '</div>').join("") : '<div class="ok" style="margin-top:8px">Nada raro comparado con tus últimos cobros.</div>';
+  }
+}
+function alertasActuales() {                              // para revisar el recibo cargado ANTES de guardarlo
+  const c = calcSueldo(), per = $("per").value, dets = [];
+  Object.keys(S.hist).sort().forEach(k => { const d = (S.hist[k].det || {})[c.quin]; if (d && k !== per && k < per) dets.push(d); });
+  const det = {rem: Object.fromEntries(c.rem.map(x => [x[0], [x[2], x[4] === "" || x[4] == null ? null : +x[4]]])), nr: c.totalNorem, td: c.totalDesc, tr: c.totalRem, neto: c.neto};
+  return alertasDe(det, dets);
+}
+
+// ---------- lector de recibos (texto de PDF o de la foto -> datos del empleado) ----------
+const LECTOR = (() => {
+// ---------- lector de recibos: toma el texto de un PDF o de la foto (varias lecturas) y saca SOLO los datos del empleado ----------
+const r2 = x => Math.round(x * 100) / 100;
+const SIN = s => String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+function dinero(t) {                                    // "1,085,659.59" / "1.085.659,59" / "96.00" -> número (solo con 2 decimales)
+  const m = String(t).match(/^(\d{1,3}(?:[.,]\d{3})*|\d+)[.,](\d{2})$/);
+  return m ? parseFloat(m[1].replace(/[.,]/g, "") + "." + m[2]) : null;
+}
+function numeros(linea) {                               // todos los importes de una línea, en orden
+  const out = [];
+  (String(linea).match(/\d[\d.,]*\d/g) || []).forEach(t => { const v = dinero(t); if (v != null) out.push(v); });
+  return out;
+}
+const UNI = {un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10, once: 11, doce: 12, trece: 13, catorce: 14, quince: 15,
+  dieciseis: 16, diecisiete: 17, dieciocho: 18, diecinueve: 19, veinte: 20, veintiun: 21, veintiuno: 21, veintiuna: 21, veintidos: 22, veintitres: 23, veinticuatro: 24, veinticinco: 25,
+  veintiseis: 26, veintisiete: 27, veintiocho: 28, veintinueve: 29, treinta: 30, cuarenta: 40, cincuenta: 50, sesenta: 60, setenta: 70, ochenta: 80, noventa: 90,
+  cien: 100, ciento: 100, doscientos: 200, trescientos: 300, cuatrocientos: 400, quinientos: 500, seiscientos: 600, setecientos: 700, ochocientos: 800, novecientos: 900};
+function palabrasANumero(txt) {                         // "Ochocientos Noventa y Un Mil Novecientos Cincuenta y Uno" -> 891951
+  const w = SIN(txt).replace(/[^a-z\s]/g, " ").split(/\s+/).filter(Boolean);
+  let total = 0, grupo = 0, visto = false;
+  for (const p of w) {
+    if (p === "y") continue;
+    if (UNI[p] != null) { grupo += UNI[p]; visto = true; }
+    else if (p === "mil") { total += (grupo || 1) * 1000; grupo = 0; visto = true; }
+    else if (p === "millon" || p === "millones") { total += (grupo || 1) * 1e6; grupo = 0; visto = true; }
+    else if (visto) break;
+  }
+  return visto ? total + grupo : null;
+}
+
+// Zona del empleado: desde donde termina el "costo del empleador" hasta el detalle de la composición salarial
+function zona(lineas) {
+  let ini = lineas.findIndex(l => /subtotal\s+contribuc/.test(SIN(l)));
+  if (ini < 0) { const k = lineas.findIndex(l => /\bnormales\b/.test(SIN(l))); ini = Math.max(-1, k - 3); }
+  let fin = lineas.findIndex((l, i) => i > ini && /detalle de la composic|total costo sindical/.test(SIN(l)));
+  if (fin < 0) fin = lineas.length;
+  return lineas.slice(ini + 1, fin);
+}
+const ETQ = {
+  normales: /\bnormales\b|\bhs\.?\s*norm/, h50: /\b50\s*%/, h100: /\b100\s*%/, feriado: /feriad/,
+  presentismo: /presentism/, premio: /camcul|premio|\bpr\s+cam/, titulo: /\btitul/, antig: /antigue/, norem: /no\s?rem/, redondeo: /redondeo/
+};
+
+function leerRecibo(textos) {
+  const av = [], res = {avisos: av};
+  const planos = textos.map(t => !!(t && t.plano));
+  textos = textos.map(t => String(t && t.t != null ? t.t : t));
+  const pasadas = textos.map(t => t.split(/\r?\n/));
+  const pool = new Map();                               // importe -> {v: votos, pos: posiciones relativas}
+  const enc = new Map();                                // importes de cualquier parte (para el básico/jornal del encabezado)
+  const ev = {};                                        // etiqueta -> {n: lecturas, u: Map unidades->votos}
+  const sumarPool = (m, v, pos, pi) => { const k = r2(v); const o = m.get(k) || {v: 0, ps: new Map()}; o.v++; if (pi != null && !o.ps.has(pi)) o.ps.set(pi, pos); m.set(k, o); };
+  pasadas.forEach((lineas, pi) => {
+    lineas.forEach((l, i) => numeros(l).forEach(v => sumarPool(enc, v, i / lineas.length)));
+    const z = planos[pi] ? lineas : zona(lineas);
+    z.forEach((l, i) => {
+      const s = SIN(l), nums = numeros(l);
+      nums.forEach(v => { if (v >= 1000) sumarPool(pool, v, i / z.length, pi); });
+      if (!planos[pi]) for (const k in ETQ) if (ETQ[k].test(s)) {
+        const e = ev[k] || (ev[k] = {n: 0, u: new Map()}); e.n++;
+        nums.filter(v => v > 0 && v < 1000).forEach(v => e.u.set(v, (e.u.get(v) || 0) + 1));
+      }
+    });
+  });
+  const esta = (v, tol = 0.011) => { for (const k of pool.keys()) if (Math.abs(k - v) <= tol) return true; return false; };
+  const estaEnc = (v, tol = 0.006) => { for (const k of enc.keys()) if (Math.abs(k - v) <= tol) return true; return false; };
+  const unidades = k => ev[k] ? [...ev[k].u.entries()].sort((a, b) => b[1] - a[1]).map(x => x[0]) : [];
+
+  // --- neto: "Son pesos: ..." escrito en letras ---
+  let neto = null;
+  const votosN = new Map();
+  for (const lineas of pasadas) {
+    const l = lineas.find(x => /son\s+pesos/.test(SIN(x)));
+    if (l) { const n = palabrasANumero(l.replace(/^.*?pesos\s*:?/i, "")); if (n) votosN.set(n, (votosN.get(n) || 0) + 1); }
+  }
+  if (votosN.size) neto = [...votosN.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0][0];
+  if (neto == null) {                                   // si no está en letras, el importe que sigue a "SUELDO NETO"
+    for (const lineas of pasadas) {
+      const i = lineas.findIndex(x => /sueldo\s+neto/.test(SIN(x)));
+      if (i >= 0) { const n = numeros(lineas[i]).concat(numeros(lineas[i + 1] || "")).filter(v => v > 1000).pop(); if (n) { neto = n; break; } }
+    }
+  }
+  res.netoRecibo = neto;
+
+  // --- período: Q  Mes  Año ---
+  const todo = textos.join("\n");
+  const per = todo.match(/(?:^|[^\d])([0-2])[\s|]+(0?[1-9]|1[0-2])[\s|]+(20\d\d)(?!\d)/m);
+  if (per) { res.quin = per[1] === "1" ? 1 : per[1] === "2" ? 2 : 0; res.mes = parseInt(per[2]); res.anio = parseInt(per[3]); }
+  else {
+    const M = {ene: 1, feb: 2, mar: 3, abr: 4, may: 5, jun: 6, jul: 7, ago: 8, sep: 9, oct: 10, nov: 11, dic: 12};
+    const hallados = []; const re = /\b(ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)[a-z]{0,6}[\/.\-il|]?\s?(\d{2})\b/gi; let m;
+    textos.forEach(t => { const s = SIN(t); re.lastIndex = 0; while ((m = re.exec(s))) if (+m[2] >= 20 && +m[2] <= 40) hallados.push({a: 2000 + +m[2], m: M[m[1]]}); });
+    if (hallados.length) {
+      const votos = {}; hallados.forEach(h => votos[h.a] = (votos[h.a] || 0) + 1);
+      const anio = +Object.keys(votos).sort((x, y) => votos[y] - votos[x] || y - x)[0];
+      res.anio = anio; res.mes = Math.max(...hallados.filter(h => h.a === anio).map(h => h.m));
+      av.push("No pude leer la quincena: elegila vos. El mes lo saqué de una descripción del recibo.");
+    } else av.push("No pude leer el mes y la quincena: elegilos vos.");
+  }
+
+  // --- tiene que ser un recibo por horas ---
+  if (!ev.normales) { av.push("No encontré la línea de horas normales. Por ahora la carga automática solo sirve para recibos por hora."); return res; }
+
+  // --- horas normales y valor de la hora (se prueban las combinaciones que cierran con los importes) ---
+  let mejor = null;
+  const cands = [];
+  unidades("normales").filter(h => h >= 20 && h <= 300).forEach(h => {
+    pool.forEach((o, m) => {
+      if (m < 10000) return;
+      const v = r2(m / h);
+      if (v >= 300 && v <= 200000 && Math.abs(r2(v * h) - m) <= 0.011) cands.push({h, v, m});
+    });
+  });
+  enc.forEach((o, t) => {                               // básico/jornal del encabezado: si multiplicado por unas horas da un importe del recibo
+    if (t < 300 || t > 200000) return;
+    pool.forEach((o2, m) => {
+      if (m < 10000) return;
+      const h = m / t, h2 = Math.round(h * 2) / 2;
+      if (h >= 20 && h <= 300 && Math.abs(h - h2) < 0.0005 && Math.abs(r2(h2 * t) - m) <= 0.011) cands.push({h: h2, v: t, m});
+    });
+  });
+  cands.forEach(c => {
+    c.p = 1 + (estaEnc(c.v) ? 3 : 0) + (unidades("normales").some(u => Math.abs(u - c.h) < 0.001) ? 1 : 0);
+    unidades("h50").concat([11]).forEach(u => { if (esta(r2(u * c.v * 1.5))) c.p += 2; });
+    if (!mejor || c.p > mejor.p) mejor = c;
+  });
+  if (!mejor) { av.push("No pude confirmar el valor de la hora con los importes del recibo. Cargalo vos."); res.hsN = (unidades("normales")[0] || 0); }
+  else { res.hsN = mejor.h; res.vh = mejor.v; }
+  const vh = res.vh;
+
+  // --- feriados, porcentajes, total remunerativo, extras y adicional de título ---
+  if (vh) {
+    const base0 = r2(res.hsN * vh);
+    const explicado = new Set([base0]);
+    const validar = (clave, mult, campo, nombre, extra) => {
+      if (!ev[clave]) { res[campo] = 0; return; }
+      const leidas = unidades(clave), opciones = new Set(leidas);
+      pool.forEach((o, m) => {
+        if ([...explicado].some(e => Math.abs(e - m) <= 0.011)) return;
+        const c = m / (vh * mult);
+        if (c >= 0.5 && c <= 150 && Math.abs(c * 2 - Math.round(c * 2)) < 0.0005 && Math.abs(r2(Math.round(c * 2) / 2 * vh * mult) - m) <= 0.011) opciones.add(Math.round(c * 2) / 2);
+      });
+      let ok = [...opciones].filter(c => esta(r2(c * vh * mult)) && !explicado.has(r2(c * vh * mult)));
+      if (!ok.length && extra) ok = extra();
+      if (ok.length) res[campo] = ok.find(c => leidas.includes(c)) || ok[0];
+      else if (leidas.some(c => c <= 100)) { res[campo] = leidas.find(c => c <= 100); av.push("Revisá las " + nombre + ": no pude confirmarlas con el importe."); }
+      else { res[campo] = 0; av.push("Vi la línea de " + nombre + " pero no pude leer cuántas son. Cargalas vos."); }
+      if (res[campo]) explicado.add(r2(res[campo] * vh * mult));
+    };
+    validar("feriado", 1, "hsF", "horas de feriado");
+    const base = r2((res.hsN + (res.hsF || 0)) * vh);
+    const grilla = p => Math.abs(p * 4 - Math.round(p * 4)) < 1e-6 || Math.abs(p - 8.33) < 1e-6;
+    const coinc = [];
+    pool.forEach((o, m) => {
+      if (m >= base) return;
+      const p = r2(m / base * 100);
+      if (p >= 0.25 && p <= 40 && grilla(p) && Math.abs(r2(base * p / 100) - m) <= 0.011) coinc.push({m, p, o});
+    });
+    coinc.sort((a, b) => {                                   // orden de aparición: se compara dentro de cada lectura y gana la mayoría
+      let d = 0; a.o.ps.forEach((pa, pi) => { if (b.o.ps.has(pi)) d += Math.sign(pa - b.o.ps.get(pi)); });
+      return d;
+    });
+    const usar = p => { const i = coinc.findIndex(c => Math.abs(c.p - p) < 0.005); if (i >= 0) coinc.splice(i, 1); };
+    if (ev.antig) {
+      const u = unidades("antig").find(x => x > 0 && x <= 30);
+      if (u != null) { res.antig = u; usar(u); }
+      else if (coinc.length) { res.antig = coinc[coinc.length - 1].p; coinc.pop(); av.push("Revisá la antigüedad."); }
+    } else res.antig = 0;
+    const tp = !!ev.presentismo, tr = !!ev.premio;
+    if (tp && tr) {
+      if (coinc.length >= 2) { res.pres = coinc[0].p; res.premio = coinc[1].p; }
+      else av.push("No pude leer el presentismo y el premio: quedaron como los tenías.");
+    } else if (tp) { if (coinc.length) res.pres = coinc[0].p; else av.push("No pude leer el presentismo: quedó como lo tenías."); res.premio = 0; }
+    else if (tr) { if (coinc.length) res.premio = coinc[0].p; else av.push("No pude leer el premio: quedó como lo tenías."); res.pres = 0; }
+    else { res.pres = 0; res.premio = 0; }
+    [res.pres, res.premio, res.antig].forEach(p => { if (p) explicado.add(r2(base * p / 100)); });
+
+    // total remunerativo: el importe grande que más se repite (es la base de los descuentos)
+    let R = null, rv = 0;
+    pool.forEach((o, m) => { if (m >= base * 0.999 && o.v > rv) { R = m; rv = o.v; } });
+    res.totRem = R;
+    if (R) explicado.add(R);
+    const pcts = r2((res.pres != null ? base * res.pres / 100 : 0) + (res.premio != null ? base * res.premio / 100 : 0) + (res.antig ? base * res.antig / 100 : 0));
+    const sinExtras = r2(base + pcts);
+    const sueltos = () => [...pool.keys()].filter(m => R && m < R * 0.3 && ![...explicado].some(e => Math.abs(e - m) <= 0.011));
+    const porSuma = (mult, otros) => () => {                   // despeja las horas extra con el total remunerativo
+      if (!R) return [];
+      const out = new Set();
+      (ev.titulo ? sueltos() : [0]).forEach(a => {
+        const c = (R - sinExtras - otros - a) / (vh * mult);
+        if (c >= 0.5 && c <= 150 && Math.abs(c * 2 - Math.round(c * 2)) < 0.0006) out.add(Math.round(c * 2) / 2);
+      });
+      return out.size === 1 ? [...out] : [];
+    };
+    validar("h50", 1.5, "hs50", "horas extra al 50%", porSuma(1.5, ev.h100 ? 0 : 0));
+    validar("h100", 2, "hs100", "horas extra al 100%");
+    const conocido = r2(sinExtras + (res.hs50 ? r2(res.hs50 * vh * 1.5) : 0) + (res.hs100 ? r2(res.hs100 * vh * 2) : 0));
+    if (ev.titulo) {
+      if (R && R - conocido > 0) { res.adic = r2(R - conocido); if (!esta(res.adic)) av.push("Revisá el adicional de título."); }
+      else av.push("No pude leer el adicional de título: quedó como lo tenías.");
+    } else res.adic = 0;
+    if (R && !ev.titulo && Math.abs(R - conocido) > 1) av.push("El total remunerativo del recibo no coincide con lo que leí: puede haber un concepto que la calculadora no tiene.");
+  }
+
+  // --- sumas no remunerativas ---
+  const redon = (() => { const e = ev.redondeo; return e ? [...e.u.keys()].find(x => x < 1) : null; })();
+  const redondos = [...pool.keys()].filter(m => m < 500000 && m % 1000 === 0).sort((a, b) => a - b);
+  let N = null;
+  if (ev.norem) {
+    const suma = redondos.reduce((s, x) => s + x, 0);
+    if (suma > 0) N = suma;
+  }
+  res.norem = N != null ? N : 0;
+  if (ev.norem && N == null) av.push("No pude leer las sumas no remunerativas: cargalas vos.");
+  return res;
+}
+  return {leerRecibo};
+})();
+
+// ---------- cargar los datos desde una foto o PDF del recibo ----------
+const LIBS = {
+  tess: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",
+  pdf: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
+  pdfW: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"
+};
+const cargarScript = src => new Promise((ok, no) => {
+  if (document.querySelector('script[src="' + src + '"]')) return ok();
+  const s = document.createElement("script"); s.src = src; s.onload = ok;
+  s.onerror = () => no(new Error("No pude descargar el lector. Revisá que tengas internet y probá de nuevo."));
+  document.head.appendChild(s);
+});
+const impMsg = (txt, err) => { const m = $("impMsg"); m.hidden = !txt; if (txt) { m.className = err ? "aviso" : "ok"; m.textContent = txt; } };
+const CLAVES = /normales|remunerativo|descuentos|sueldo neto|jubilac|presentism|empleador|son pesos|antigued/gi;
+let PASO = "";
+
+function aCanvas(bmp, ang, maxLado) {                    // achica la imagen y la gira (0, 90, 180 o 270 grados)
+  const k = Math.min(1, maxLado / Math.max(bmp.width, bmp.height)), w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
+  const giro = ang % 180 !== 0, c = document.createElement("canvas");
+  c.width = giro ? h : w; c.height = giro ? w : h;
+  const x = c.getContext("2d", {willReadFrequently: true});
+  x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); x.imageSmoothingQuality = "high";
+  x.translate(c.width / 2, c.height / 2); x.rotate(ang * Math.PI / 180); x.drawImage(bmp, -w / 2, -h / 2, w, h);
+  return c;
+}
+function gris(c) {                                       // escala de grises con el contraste estirado
+  const x = c.getContext("2d", {willReadFrequently: true}), d = x.getImageData(0, 0, c.width, c.height), p = d.data, n = c.width * c.height;
+  const g = new Uint8ClampedArray(n), h = new Uint32Array(256);
+  for (let i = 0, j = 0; j < n; i += 4, j++) { const v = (p[i] * 299 + p[i + 1] * 587 + p[i + 2] * 114) / 1000 | 0; g[j] = v; h[v]++; }
+  let lo = 0, hi = 255;
+  for (let v = 0, s = 0; v < 256; v++) { s += h[v]; if (s >= n * 0.01) { lo = v; break; } }
+  for (let v = 255, s = 0; v >= 0; v--) { s += h[v]; if (s >= n * 0.01) { hi = v; break; } }
+  const k = 255 / Math.max(hi - lo, 1);
+  for (let i = 0, j = 0; j < n; i += 4, j++) { const v = Math.max(0, Math.min(255, (g[j] - lo) * k)); p[i] = p[i + 1] = p[i + 2] = v; p[i + 3] = 255; }
+  x.putImageData(d, 0, 0); return c;
+}
+function umbral(c, win = 41, off = 12) {                 // blanco y negro según el brillo de alrededor (ayuda con sombras)
+  const w = c.width, h = c.height, d = c.getContext("2d", {willReadFrequently: true}).getImageData(0, 0, w, h), p = d.data;
+  const I = new Uint32Array((w + 1) * (h + 1));
+  for (let y = 0; y < h; y++) { let f = 0; for (let x = 0; x < w; x++) { f += p[(y * w + x) * 4]; I[(y + 1) * (w + 1) + x + 1] = I[y * (w + 1) + x + 1] + f; } }
+  const r = win >> 1, out = document.createElement("canvas"); out.width = w; out.height = h;
+  const o = out.getContext("2d"), od = o.createImageData(w, h), q = od.data;
+  for (let y = 0; y < h; y++) {
+    const y0 = Math.max(0, y - r), y1 = Math.min(h, y + r + 1);
+    for (let x = 0; x < w; x++) {
+      const x0 = Math.max(0, x - r), x1 = Math.min(w, x + r + 1), k = (y * w + x) * 4;
+      const s = I[y1 * (w + 1) + x1] - I[y0 * (w + 1) + x1] - I[y1 * (w + 1) + x0] + I[y0 * (w + 1) + x0];
+      q[k] = q[k + 1] = q[k + 2] = p[k] > s / ((y1 - y0) * (x1 - x0)) - off ? 255 : 0; q[k + 3] = 255;
+    }
+  }
+  o.putImageData(od, 0, 0); return out;
+}
+async function crearOcr() {
+  await cargarScript(LIBS.tess);
+  return Tesseract.createWorker("eng", 1, {logger: m => {
+    if (m.status === "recognizing text") impMsg(PASO + " " + Math.round(m.progress * 100) + "%");
+    else if (/loading|initializ/.test(m.status || "")) impMsg("Descargando el lector (solo la primera vez)…");
+  }});
+}
+async function leer(w, canvas, psm) {
+  await w.setParameters({tessedit_pageseg_mode: psm, user_defined_dpi: "300"});
+  return (await w.recognize(canvas)).data.text || "";
+}
+async function tresLecturas(w, canvas) {                 // tres lecturas distintas; juntas se corrigen entre sí
+  const g = gris(canvas);
+  PASO = "Leyendo el recibo (1 de 3)…"; const t1 = await leer(w, g, "6");
+  PASO = "Leyendo el recibo (2 de 3)…"; const t2 = await leer(w, g, "11");
+  PASO = "Leyendo el recibo (3 de 3)…"; const t3 = await leer(w, umbral(g), "6");
+  return [t1, {t: t2, plano: true}, t3];
+}
+async function textosDeImagen(file) {
+  impMsg("Preparando la imagen…");
+  const bmp = await createImageBitmap(file);
+  const w = await crearOcr();
+  try {
+    const giros = bmp.height >= bmp.width ? [0, 180, 90, 270] : [90, 270, 0, 180];
+    let mejor = {ang: giros[0], pts: -1};
+    for (let i = 0; i < giros.length; i++) {
+      if (i === 2 && mejor.pts >= 4) break;              // ya se vio cuál es
+      PASO = "Buscando cómo está girado el recibo…";
+      const t = await leer(w, gris(aCanvas(bmp, giros[i], 1600)), "6");
+      const pts = (t.match(CLAVES) || []).length;
+      if (pts > mejor.pts) mejor = {ang: giros[i], pts};
+      if (i === 1 && mejor.pts >= 4) break;
+    }
+    return await tresLecturas(w, aCanvas(bmp, mejor.ang, 2200));
+  } finally { await w.terminate(); }
+}
+async function textosDePdf(file) {
+  impMsg("Abriendo el PDF…");
+  await cargarScript(LIBS.pdf); pdfjsLib.GlobalWorkerOptions.workerSrc = LIBS.pdfW;
+  const pdf = await pdfjsLib.getDocument({data: await file.arrayBuffer()}).promise;
+  let txt = "";
+  for (let p = 1; p <= Math.min(pdf.numPages, 3); p++) {
+    const tc = await (await pdf.getPage(p)).getTextContent();
+    const it = tc.items.filter(i => i.str && i.str.trim()).map(i => ({s: i.str, x: i.transform[4], y: i.transform[5]}));
+    it.sort((a, b) => b.y - a.y || a.x - b.x);
+    const lin = []; let cur = null;
+    it.forEach(i => { if (cur && Math.abs(cur.y - i.y) <= 3) cur.it.push(i); else { cur = {y: i.y, it: [i]}; lin.push(cur); } });
+    txt += lin.map(l => l.it.sort((a, b) => a.x - b.x).map(i => i.s).join(" ")).join("\n") + "\n";
+  }
+  if (txt.replace(/\s/g, "").length > 300) return [txt];
+  impMsg("El PDF es una imagen: lo leo como foto…");   // PDF escaneado
+  const pg = await pdf.getPage(1), vp = pg.getViewport({scale: 2.5}), c = document.createElement("canvas");
+  c.width = vp.width; c.height = vp.height;
+  await pg.render({canvasContext: c.getContext("2d", {willReadFrequently: true}), viewport: vp}).promise;
+  const w = await crearOcr();
+  try { return await tresLecturas(w, c); } finally { await w.terminate(); }
+}
+
+let IMP = null;
+function filaImp(a, b) { return '<div class="r"><span>' + a + '</span><span class="a">' + b + '</span></div>'; }
+function mostrarImp(r) {
+  IMP = r;
+  const h = [], perIni = r.mes ? r.anio + "-" + String(r.mes).padStart(2, "0") : $("per").value, qIni = r.quin != null ? r.quin : parseInt($("quin").value);
+  h.push(filaImp("Mes", '<input type="month" id="impPer" value="' + perIni + '" style="height:38px">'));
+  h.push(filaImp("Quincena" + (r.quin == null ? " <small>(no pude leerla: elegila)</small>" : ""),
+    '<select id="impQ" style="height:38px">' + [[1, "1ª quincena"], [2, "2ª quincena"], [0, "Mes completo"]].map(o => '<option value="' + o[0] + '"' + (o[0] === qIni ? " selected" : "") + ">" + o[1] + "</option>").join("") + "</select>"));
+  if (r.vh) {
+    h.push(filaImp("Horas normales", r.hsN + " hs"), filaImp("Valor de la hora", money(r.vh)));
+    if (r.hsF) h.push(filaImp("Horas de feriado", r.hsF + " hs"));
+    if (r.hs50) h.push(filaImp("Extra al 50%", r.hs50 + " hs"));
+    if (r.hs100) h.push(filaImp("Extra al 100%", r.hs100 + " hs"));
+    if (r.pres != null) h.push(filaImp("Presentismo", r.pres + "%"));
+    if (r.premio != null) h.push(filaImp("Premio", r.premio + "%"));
+    if (r.antig != null) h.push(filaImp("Antigüedad", r.antig + "%"));
+    if (r.adic != null) h.push(filaImp("Adicional de título", r.adic ? money(r.adic) : "no cobrás"));
+    if (r.norem != null) h.push(filaImp("Sumas no remunerativas", money(r.norem)));
+  }
+  if (r.netoRecibo) h.push(filaImp("Neto que dice el recibo", money(r.netoRecibo)));
+  const av = r.avisos.map(a => '<p class="aviso">' + a.replace(/</g, "&lt;") + '</p>').join("");
+  const sirve = !!r.vh;
+  $("impRes").innerHTML = '<b>Esto fue lo que leí</b>' + h.join("") + av +
+    '<div class="syrow" style="border:0;padding:8px 0 0;margin:0"><div></div><div>' +
+    (sirve ? '<button type="button" class="btn2" data-imp="ok">Completar la calculadora</button>' : '') +
+    '<button type="button" class="btn2" data-imp="no">Descartar</button></div></div>';
+  $("impRes").hidden = false;
+}
+function aplicarImp(r) {
+  const seg = (id, v) => { const b = document.querySelector('.seg[data-for="' + id + '"] button[data-v="' + v + '"]'); if (b) b.click(); };
+  const set = (id, v) => { if (v != null && !isNaN(v)) $(id).value = String(v).replace(".", ","); };
+  const perElegido = $("impPer").value, qElegida = $("impQ").value;
+  if (perElegido) $("per").value = perElegido;
+  seg("modo", "hora");
+  seg("quin", qElegida);
+  set("vh", r.vh); set("hsN", r.hsN); set("hsF", r.hsF || 0); set("hs50h", r.hs50 || 0); set("hs100h", r.hs100 || 0);
+  set("presH", r.pres); set("premioH", r.premio); set("antigH", r.antig);
+  if (r.adic != null) { $("adicOn").checked = r.adic > 0; if (r.adic > 0) set("adicH", r.adic); }
+  set("norem", r.norem); set("otros", 0);
+  todo();
+  const c = calcSueldo();
+  let msg, ok = true;
+  if (r.netoRecibo) {
+    const dif = r2(c.neto - r.netoRecibo);
+    if (Math.abs(dif) < 1) msg = "Listo. El neto de la calculadora (" + money(c.neto) + ") coincide con el del recibo.";
+    else { ok = false; msg = "Listo, pero el neto de la calculadora (" + money(c.neto) + ") difiere del recibo (" + money(r.netoRecibo) + ") en " + money(Math.abs(dif)) + ". Revisá los datos o los descuentos."; }
+  } else msg = "Listo. Revisá que el neto (" + money(c.neto) + ") sea el de tu recibo.";
+  impMsg(msg, !ok);
+  let alt = ""; try { const al = alertasActuales(); if (al && al.length) alt = '<p><b>Antes de guardar, revisá:</b></p>' + al.map(t => '<p class="aviso">' + t.replace(/</g, "&lt;") + "</p>").join(""); } catch (e) {}
+  $("impRes").innerHTML = alt + '<div class="syrow" style="border:0;padding:0;margin:0"><div><b>¿Lo guardás para el SAC?</b><small>Queda en el historial de ese mes</small></div><div><button type="button" class="btn2" data-imp="sac">Guardar para el SAC</button><button type="button" class="btn2" data-imp="no">Ahora no</button></div></div>';
+  $("impRes").hidden = false;
+  window.scrollTo({top: 0, behavior: "smooth"});
+}
+$("impBtn").onclick = () => $("impFile").click();
+$("impFile").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f || $("impBtn").disabled) return;
+  $("impBtn").disabled = true; $("impRes").hidden = true;
+  try {
+    const pdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name);
+    const res = LECTOR.leerRecibo(pdf ? await textosDePdf(f) : await textosDeImagen(f));
+    impMsg(null); mostrarImp(res);
+  } catch (err) { impMsg("No pude leer el recibo: " + (err && err.message || err), true); }
+  finally { $("impBtn").disabled = false; }
+};
+$("impRes").addEventListener("click", e => {
+  const b = e.target.closest("button[data-imp]"); if (!b) return;
+  if (b.dataset.imp === "ok" && IMP) aplicarImp(IMP);
+  else if (b.dataset.imp === "sac") { $("guardar").click(); impMsg($("okGuardado").textContent); $("impRes").hidden = true; }
+  else { $("impRes").hidden = true; if (b.dataset.imp === "no" && !$("impMsg").hidden && /Listo/.test($("impMsg").textContent)) return; impMsg(null); }
+});
+
+
+// ---------- apariencia: tema y tamaño de letra (se guardan en este dispositivo) ----------
+const UI = (() => { try { return JSON.parse(localStorage.getItem("calc_sueldo_ui")) || {}; } catch (e) { return {}; } })();
+function aplicarUI() {
+  document.documentElement.dataset.tema = UI.tema || "";
+  document.documentElement.dataset.letra = UI.letra || "0";
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = UI.tema === "claro" ? "#eef1ea" : "#1c3556";
+}
+["tema", "letra"].forEach(k => {
+  $(k).addEventListener("change", () => { UI[k] = $(k).value; try { localStorage.setItem("calc_sueldo_ui", JSON.stringify(UI)); } catch (e) {} aplicarUI(); });
+  const b = document.querySelector('.seg[data-for="' + k + '"] button[data-v="' + (UI[k] || (k === "letra" ? "0" : "")) + '"]');
+  if (b) { $(k).value = b.dataset.v; b.setAttribute("aria-checked", "true"); document.querySelectorAll('.seg[data-for="' + k + '"] button').forEach(x => x !== b && x.setAttribute("aria-checked", "false")); }
+});
+aplicarUI();
+
 // ---------- copia en archivo JSON (se guarda en Google Drive, OneDrive o donde quieras) ----------
 const ARCH = "calculadora-sueldo.json";
 let SY = {ult: 0, mod: false, arch: ""};
@@ -1111,7 +1643,7 @@ function puntosHist() {
     defs.forEach(([kb, kn, full, corto]) => {
       const bruto = num(h[kb]), neto = h[kn] == null ? 0 : +h[kn], v = HV.met === "neto" ? neto : bruto;
       if (HV.met === "neto" && bruto > 0 && !neto) sinNeto++;
-      if (v > 0) out.push({v, corto, mes: MESES[+m - 1] || per, anio, txt: (full ? full + " de " : "") + (MESES[+m - 1] || per) + " " + anio});
+      if (v > 0) out.push({per, q: HV.tipo === "q" ? (kb === "a" ? 1 : 2) : 0, v, corto, mes: MESES[+m - 1] || per, anio, txt: (full ? full + " de " : "") + (MESES[+m - 1] || per) + " " + anio});
     });
   });
   out.forEach((p, i) => p.prev = i ? out[i - 1].v : null);
@@ -1119,6 +1651,7 @@ function puntosHist() {
 }
 const kk = v => v >= 1e6 ? (v / 1e6).toFixed(2).replace(".", ",") + "M" : Math.round(v / 1000) + "k";
 function pintarHist() {
+  $("hWhy").innerHTML = $("hAlert").innerHTML = "";
   document.querySelectorAll("[data-hv]").forEach(b => { const [k, v] = b.dataset.hv.split(":"); b.setAttribute("aria-pressed", String(HV[k] === v)); });
   const {out, sinNeto} = puntosHist(), V = out.slice(-12), n = V.length, unidad = HV.tipo === "q" ? "quincena" : "mes";
   $("hNota").textContent = sinNeto ? `Hay ${sinNeto} ${sinNeto === 1 ? "mes cargado" : "meses cargados"} a mano en Aguinaldo que no tienen neto guardado. Pasá a "Bruto" para verlos.` : "";
@@ -1133,6 +1666,7 @@ function pintarHist() {
     $("hSum").innerHTML = d === 0 ? `<div class="ok">${esc(last.txt)}: <b>${money(last.v)}</b> ${met}, igual que ${esc(ant)}.</div>`
       : `<div class="${d > 0 ? "ok" : "aviso"}">${esc(last.txt)}: <b>${money(last.v)}</b> ${met}.<br>${d > 0 ? "Ganaste" : "Cobraste"} <b>${money(Math.abs(d))}</b> ${d > 0 ? "más" : "menos"} (${d > 0 ? "+" : MENOS}${fmt.format(Math.abs(pct))}%) que en ${esc(ant)}.</div>`;
   }
+  pintarPorque(out, last);
   // gráfico de líneas (SVG, sin librerías): verde si subió, rojo si bajó
   const W = 360, H = 210, top = 28, bot = 46, L = 22, R = 22, ph = H - top - bot;
   const lo = Math.min(...V.map(p => p.v)), hi = Math.max(...V.map(p => p.v)), pad = (hi - lo) * .2 || hi * .1;
