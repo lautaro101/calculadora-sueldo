@@ -1,14 +1,14 @@
 {
   "id": "./",
-  "name": "Cuánto voy a cobrar",
-  "short_name": "Mi sueldo",
+  "name": "Mi Recibo",
+  "short_name": "Mi Recibo",
   "description": "Calculá tu sueldo neto, el aguinaldo y mirá cómo viene cada quincena.",
   "lang": "es-AR",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#eef1ea",
+  "background_color": "#1c3556",
   "theme_color": "#1c3556",
   "icons": [
     {
