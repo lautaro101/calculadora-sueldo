@@ -1381,12 +1381,13 @@ function interpretarRecibo(words) {
   const medH = mediana(W.map(w => w.h)), tolL = Math.max(6, medH * 0.6);
   const sin = w => sinTildes(w.t).toLowerCase();
 
-  // anclas de la tabla: "Composición salarial" abajo y el segundo encabezado "Descripción" arriba (el primero es el del empleador)
-  const yComp = W.filter(w => /^composici/.test(sin(w))).sort((a, b) => a.yc - b.yc)[0];
+  // anclas de la tabla: el fin ("Composición salarial", o si no hay: la fila de totales / "Neto") y el encabezado "Descripción" de la tabla de haberes
+  const nor = W.filter(w => /^normales/.test(sin(w))).sort((a, b) => a.yc - b.yc)[0];
   const descs = W.filter(w => /^descripci/.test(sin(w))).sort((a, b) => a.yc - b.yc);
+  const yComp = W.filter(w => /^composici/.test(sin(w))).sort((a, b) => a.yc - b.yc)[0] ||
+    W.filter(w => /^(remunerativos?|neto|totales?|son)$/.test(sin(w)) && w.yc > (nor ? nor.yc + medH * 2 : 0)).sort((a, b) => a.yc - b.yc)[0];
   if (!yComp) { res.avisos.push("No encontré la tabla de haberes y descuentos. ¿Está entera y bien girada la foto?"); return res; }
   const encab = descs.filter(w => w.yc < yComp.yc).pop();
-  const nor = W.filter(w => /^normales/.test(sin(w)) && w.yc < yComp.yc).sort((a, b) => a.yc - b.yc)[0];
   if (!encab && !nor) { res.avisos.push("No encontré la tabla de haberes y descuentos. ¿Está entera y bien girada la foto?"); return res; }
   const y0 = encab ? encab.yc + medH * 0.15 : nor.yc - medH * 1.8, y1 = yComp.yc - medH * 0.3;
   const enRegion = W.filter(w => w.yc > y0 && w.yc < y1);
@@ -1459,10 +1460,16 @@ function interpretarRecibo(words) {
   const banda = W.filter(w => RE_AMT.test(w.t) && w.yc > yComp.yc && w.yc < bandaFin);
   const T = [...new Set(banda.map(w => numRecibo(w.t)))];
   if (T.length >= 2) R.remImpreso = Math.max(...T);
-  // reparación de un importe mal leído: si la suma de los haberes no da el total impreso y UN importe
-  // cambiando 1-2 dígitos lo arregla, se corrige
   const remFilas = [H.n, H.f, H.h50, H.h100, H.pres, H.premio, H.adic, H.antig].filter(Boolean);
-  if (R.remImpreso) {
+  let adicExtra = 0, noremExtra = 0;
+  if (otros.length) {
+    const sk = remFilas.reduce((t, f) => t + f.monto, 0), su = otros.reduce((t, f) => t + f.monto, 0), nom = otros.map(f => `"${f.desc}"`).join(", ");
+    if (R.remImpreso && cerca(sk, R.remImpreso)) { noremExtra = su; res.avisos.push(`La calculadora no tiene ${nom}: lo sumé como suma no remunerativa (así cierra con el total del recibo).`); }
+    else if (R.remImpreso && cerca(sk + su, R.remImpreso)) { adicExtra = su; res.avisos.push(`La calculadora no tiene ${nom}: lo sumé al adicional fijo (así cierra con el total remunerativo del recibo).`); }
+    else res.avisos.push(`No sé dónde cargar ${nom} ($ ${su.toFixed(2)}); no lo sumé.`);
+  }
+  // reparación de un importe mal leído: solo si todos los renglones se entendieron y UN importe, cambiando 1-2 dígitos, arregla la suma
+  if (R.remImpreso && !otros.length) {
     const suma = remFilas.reduce((s, f) => s + f.monto, 0);
     if (!cerca(suma, R.remImpreso)) {
       for (const f of remFilas) {
@@ -1485,9 +1492,9 @@ function interpretarRecibo(words) {
   R.hsN = horas(H.n, 1); R.hsF = horas(H.f, 1); R.hs50 = horas(H.h50, 1.5); R.hs100 = horas(H.h100, 2);
   const base = (R.hsN + R.hsF) * R.vh, pct = f => f ? redondear(f.monto / base * 100) : 0;
   R.pres = pct(H.pres); R.premio = pct(H.premio); R.antig = pct(H.antig);
-  R.adic = H.adic ? H.adic.monto : 0; R.norem = redondear(norem);
+  R.adic = redondear((H.adic ? H.adic.monto : 0) + adicExtra); R.norem = redondear(norem + noremExtra);
   R.redondeo = hayRedondeo;
-  R.rem = redondear(remFilas.reduce((s, f) => s + f.monto, 0));
+  R.rem = redondear(remFilas.reduce((s, f) => s + f.monto, 0) + adicExtra);
   R.baseBasica = (R.hsN + R.hsF) * R.vh + (R.antig ? base * R.antig / 100 : 0) + R.adic;
   // descuentos: el porcentaje se deduce del importe (base × % = importe), con porcentajes "redondos";
   // los que no encajan en ninguna base son importes fijos
@@ -1511,7 +1518,6 @@ function interpretarRecibo(words) {
   const MM = {ene: 1, feb: 2, mar: 3, abr: 4, may: 5, jun: 6, jul: 7, ago: 8, sep: 9, oct: 10, nov: 11, dic: 12}, hall = [];
   res.filas.forEach(f => { const re = /\b(ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)[a-z]{0,6}[\/.\-il|]?\s?(\d{2})\b/gi; let m; const t = sinTildes(f.desc); while ((m = re.exec(t))) if (+m[2] >= 20 && +m[2] <= 40) hall.push({a: 2000 + +m[2], m: MM[m[1].toLowerCase()]}); });
   if (hall.length) { const vot = {}; hall.forEach(h => vot[h.a] = (vot[h.a] || 0) + 1); const an = +Object.keys(vot).sort((x, y) => vot[y] - vot[x] || y - x)[0]; R.anioDesc = an; R.mesDesc = Math.max(...hall.filter(h => h.a === an).map(h => h.m)); }
-  otros.forEach(f => res.avisos.push(`No sé dónde cargar "${f.desc}" ($ ${f.monto.toFixed(2)}); no lo sumé.`));
 
   // encabezado: período y datos del recibo
   const limiteTop = descs.length > 1 ? descs[0].yc - medH : (encab ? encab.yc - medH * 8 : y0 - medH * 8);
