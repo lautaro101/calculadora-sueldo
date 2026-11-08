@@ -1,6 +1,6 @@
 /* Service worker de "Mi Recibo": deja usar la app sin conexión.
    Si cambiás index.html, subí el archivo y listo: con internet siempre baja la versión nueva. */
-const V = "calc-sueldo-v28";
+const V = "calc-sueldo-v31";
 const AV = "calc-avisos";                               // aquí se guardan los próximos avisos (no se borra al actualizar)
 const SHELL = ["./", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 

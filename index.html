@@ -64,10 +64,10 @@ body{margin:0;background:var(--paper);color:var(--ink);font:400 1rem/1.45 var(--
 .top p{margin:8px 0 0;color:var(--mut);font-size:.92rem;max-width:44ch}
 .tabs{position:sticky;top:0;z-index:20;background:var(--paper);padding:8px 16px 10px}
 .tabs-in{max-width:1040px;margin:0 auto}
-.tabs-in div{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;background:var(--fill);border-radius:13px;padding:4px}
-.tabs button{min-height:44px;border:0;border-radius:10px;background:none;color:var(--mut);font:600 .98rem var(--sans);cursor:pointer}
+.tabs-in div{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--fill);border-radius:13px;padding:4px}
+.tabs button{min-height:44px;border:0;border-radius:10px;background:none;color:var(--mut);font:600 .9rem var(--sans);cursor:pointer;padding:0 2px}
 .tabs button.on{background:var(--on);color:var(--ink);box-shadow:0 1px 3px #0003}
-@media(min-width:900px){.tabs-in div{max-width:560px}}
+@media(min-width:900px){.tabs-in div{max-width:640px}}
 
 main{max-width:1040px;margin:0 auto;padding:8px 16px 130px}
 
@@ -285,6 +285,7 @@ input:disabled{opacity:.45}
   <button class="on" data-tab="S">Sueldo</button>
   <button data-tab="C">Aguinaldo</button>
   <button data-tab="H">Historial</button>
+  <button data-tab="P">Paritarias</button>
 </div></div></nav>
 
 <main>
@@ -355,8 +356,8 @@ input:disabled{opacity:.45}
     </section>
 
     <section class="grp" id="g-gen">
-      <h2>Los conceptos de tu recibo</h2>
-      <p class="sub">Cada renglón de tu recibo es un concepto y cada uno se calcula de una forma. Lo más fácil es subir tu recibo arriba y se arma solo. Después, cada mes solo cambiás lo que varía: horas, días o valor.</p>
+      <h2 id="genH">Los conceptos de tu recibo</h2>
+      <p class="sub" id="genSub">Cada renglón de tu recibo es un concepto y cada uno se calcula de una forma. Lo más fácil es subir tu recibo arriba y se arma solo. Después, cada mes solo cambiás lo que varía: horas, días o valor.</p>
       <div id="primeraVez" hidden style="margin:10px 0;padding:14px;border:1.5px solid var(--line);border-radius:12px;background:var(--sheet)">
         <b>Para empezar</b>
         <p class="nota" style="margin:6px 0 10px">Lo mejor es cargar tu recibo (foto o PDF): así arma solo tus conceptos y tus descuentos. Mientras tanto te dejé un perfil de ejemplo con números inventados. Cuando cargues tu recibo se crea tu perfil.</p>
@@ -368,30 +369,6 @@ input:disabled{opacity:.45}
         <p class="nota">Si cargás un recibo distinto (otra empresa u otro convenio) se crea un perfil aparte. Acá cambiás de uno a otro.</p></div>
       <div id="genBox"></div>
       <label class="check" style="margin-top:14px"><input type="checkbox" id="redondeo2"> Redondear el neto al peso</label>
-      <div id="aumBox" style="margin-top:18px">
-        <p class="p-g">Aumentos y paritarias</p>
-        <p class="nota" style="margin:2px 0 8px">Si ya sabés que viene un aumento, cargalo y mirá cuánto vas a cobrar en los próximos meses. Cuando te lo paguen, tocá "Aplicar ahora" y se suma a tus valores.</p>
-        <div id="aumLista"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">
-          <label style="flex:1 1 150px;font-size:.82rem">Tipo<select id="aumTipo" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"><option value="pct">Aumento en %</option><option value="suma">Suma fija por mes</option></select></label>
-          <label style="flex:1 1 130px;font-size:.82rem">Desde<input type="month" id="aumDesde" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
-        </div>
-        <div id="aumFPct" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">
-          <label style="flex:1 1 150px;font-size:.82rem">Aumento %<input id="aumPct" inputmode="decimal" placeholder="8" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
-          <label style="flex:2 1 200px;font-size:.82rem">Sube<select id="aumSobre" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"><option value="todo">Todos los importes de haberes</option><option value="basico">Solo el básico (valor hora o sueldo)</option></select></label>
-          <label style="flex:1 1 100%;font-size:.82rem">Si viene en tramos, un % por mes (opcional)<input id="aumTramos" placeholder="Ej: 2 2 1,5  (un aumento por mes desde el mes elegido)" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
-        </div>
-        <div id="aumFSuma" style="display:none;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">
-          <label style="flex:1 1 150px;font-size:.82rem">Monto $<input id="aumMonto" inputmode="decimal" placeholder="50000" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
-          <label style="flex:2 1 200px;font-size:.82rem">Nombre<input id="aumNombre" placeholder="Suma no remunerativa paritaria" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
-          <label style="flex:1 1 150px;font-size:.82rem">Tipo de suma<select id="aumRem" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"><option value="norem">No remunerativa (sin descuentos)</option><option value="rem">Remunerativa (con descuentos)</option></select></label>
-          <label style="flex:1 1 150px;font-size:.82rem">Se cobra<select id="aumQ" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"><option value="0">En cada recibo</option><option value="1">Solo 1ª quincena</option><option value="2">Solo 2ª quincena</option></select></label>
-          <p class="nota" style="flex:1 1 100%;margin:0">Si cargás otra suma con el mismo nombre en un mes más adelante, pisa el monto anterior. Sirve para las sumas que van subiendo.</p>
-        </div>
-        <button type="button" class="btn2" id="aumAdd" style="margin-top:8px">Agregar</button>
-        <div id="aumRetro" style="margin-top:12px"></div>
-        <div id="aumProy" style="margin-top:12px"></div>
-      </div>
     </section>
 
     <section class="grp" id="g-hora" hidden>
@@ -443,6 +420,38 @@ input:disabled{opacity:.45}
       <p class="nota" id="n-norem">Lo no remunerativo se suma a lo que cobrás y no tiene descuentos de ley.</p>
     </section>
   </form>
+</div>
+
+<!-- ============================ PARITARIAS ============================ -->
+<div class="hist" id="tab-par" hidden>
+  <section class="grp">
+    <h2>Aumentos y paritarias</h2>
+    <p class="sub" id="parPerfil"></p>
+      <div id="aumBox">
+        
+        <p class="nota" style="margin:2px 0 8px">Si ya sabés que viene un aumento, cargalo y mirá cuánto vas a cobrar en los próximos meses. Cuando te lo paguen, tocá "Aplicar ahora" y se suma a tus valores.</p>
+        <div id="aumLista"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">
+          <label style="flex:1 1 150px;font-size:.82rem">Tipo<select id="aumTipo" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"><option value="pct">Aumento en %</option><option value="suma">Suma fija por mes</option></select></label>
+          <label style="flex:1 1 130px;font-size:.82rem">Desde<input type="month" id="aumDesde" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
+        </div>
+        <div id="aumFPct" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">
+          <label style="flex:1 1 150px;font-size:.82rem">Aumento %<input id="aumPct" inputmode="decimal" placeholder="8" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
+          <label style="flex:2 1 200px;font-size:.82rem">Sube<select id="aumSobre" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"><option value="todo">Todos los importes de haberes</option><option value="basico">Solo el básico (valor hora o sueldo)</option></select></label>
+          <label style="flex:1 1 100%;font-size:.82rem">Si viene en tramos, un % por mes (opcional)<input id="aumTramos" placeholder="Ej: 2 2 1,5  (un aumento por mes desde el mes elegido)" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
+        </div>
+        <div id="aumFSuma" style="display:none;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">
+          <label style="flex:1 1 150px;font-size:.82rem">Monto $<input id="aumMonto" inputmode="decimal" placeholder="50000" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
+          <label style="flex:2 1 200px;font-size:.82rem">Nombre<input id="aumNombre" placeholder="Suma no remunerativa paritaria" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
+          <label style="flex:1 1 150px;font-size:.82rem">Tipo de suma<select id="aumRem" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"><option value="norem">No remunerativa (sin descuentos)</option><option value="rem">Remunerativa (con descuentos)</option></select></label>
+          <label style="flex:1 1 150px;font-size:.82rem">Se cobra<select id="aumQ" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"><option value="0">En cada recibo</option><option value="1">Solo 1ª quincena</option><option value="2">Solo 2ª quincena</option></select></label>
+          <p class="nota" style="flex:1 1 100%;margin:0">Si cargás otra suma con el mismo nombre en un mes más adelante, pisa el monto anterior. Sirve para las sumas que van subiendo.</p>
+        </div>
+        <button type="button" class="btn2" id="aumAdd" style="margin-top:8px">Agregar</button>
+        <div id="aumRetro" style="margin-top:12px"></div>
+        <div id="aumProy" style="margin-top:12px"></div>
+      </div>
+  </section>
 </div>
 
 <!-- ============================ HISTORIAL ============================ -->
@@ -654,7 +663,7 @@ function publicar(pre, d) {
   if (pre === TAB) { $("barTxt").textContent = d.lbl; $("barVal").textContent = money(d.neto); barra(); }
 }
 function barra() {
-  if (TAB === "H") { $("bar").hidden = true; return; }
+  if (TAB === "H" || TAB === "P") { $("bar").hidden = true; return; }
   const h = $(TAB === "S" ? "heroS" : "heroC");
   $("bar").hidden = !(innerWidth < 900 && h.getBoundingClientRect().bottom < 0);
 }
@@ -916,7 +925,8 @@ const GRUPOS = [["rem", "Haberes con descuentos", "Suman al total remunerativo, 
                 ["norem", "Haberes sin descuentos", "Sumas no remunerativas: se cobran enteras."],
                 ["desc", "Descuentos", "Aportes, sindicato, obra social, adelantos…"]];
 let PER_ED = "";
-function edItem(it, items, M, act) {
+let EDITANDO = false;      // ¿se está armando o editando el perfil? (si no, se ve la vista simple de todos los días)
+function edItem(it, items, M, act, pun) {
   const otros = items.filter(x => x !== it && x.f === "cant" && x.t !== "desc" && x.ref !== it.id);
   let campos = "";
   if (it.f === "fijo") campos = `<label>Importe<div class="in pre"><span>$</span><input data-f="m" inputmode="decimal" value="${fmtIn(it.m)}"></div></label>`;
@@ -944,16 +954,16 @@ function edItem(it, items, M, act) {
       ${campos}
       <label>Cuándo<select data-s="q">${optH(0, "Siempre", it.q || 0)}${optH(1, "Solo 1ª quincena", it.q || 0)}${optH(2, "Solo 2ª quincena", it.q || 0)}</select></label>
       <label>Código<input data-f="c" value="${esc(it.c)}" inputmode="numeric" aria-label="Código del concepto"></label>
-      ${it.t === "desc" && !it.vd ? "" : `<label class="ck" style="grid-column:1/-1"><input type="checkbox" data-pun${it.vd ? " checked" : ""}> ${it.vd ? "Puntual: solo vale en " + esc(etiqueta(it.vd)) + (it.vh && it.vh !== it.vd ? " a " + esc(etiqueta(it.vh)) : "") : "Es puntual (solo vale en " + (PER_ED ? esc(etiqueta(PER_ED)) : "este mes") + ")"}</label>`}
+      ${pun && (it.t === "norem" || /retroactiv/i.test(sinAc(it.n))) ? `<label class="ck" style="grid-column:1/-1"><input type="checkbox" data-pun${it.vd ? " checked" : ""}> ${it.vd ? "Puntual: solo vale en " + esc(etiqueta(it.vd)) + (it.vh && it.vh !== it.vd ? " a " + esc(etiqueta(it.vh)) : "") : "Es puntual (solo vale en " + (PER_ED ? esc(etiqueta(PER_ED)) : "este mes") + ")"}</label>` : it.vd ? `<label class="ck" style="grid-column:1/-1"><input type="checkbox" data-pun checked> Puntual: solo vale en ${esc(etiqueta(it.vd))}${it.vh && it.vh !== it.vd ? " a " + esc(etiqueta(it.vh)) : ""} (destildá para que valga siempre)</label>` : ""}
     </div>
     <div class="cn-m"><span>${act ? "Da" : "No entra en este período"}</span><b data-m="${esc(it.id)}">${act && M[it.id] != null ? money(M[it.id]) : ""}</b></div></div>`;
 }
-function edHTML(items, quin, M, act) {
+function edHTML(items, quin, M, act, pun) {
   let h = "";
   if (!items.length) h += `<p class="nota">Todavía no hay ningún concepto. Subí tu recibo (foto o PDF) y se completa solo, o agregalos a mano.</p>`;
   GRUPOS.forEach(([t, tit, ayuda]) => {
     const l = items.filter(x => x.t === t);
-    h += `<p class="p-g">${tit}</p>${l.length ? "" : `<p class="nota" style="margin:2px 0 0">${ayuda}</p>`}` + l.map(it => edItem(it, items, M, act.has(it.id))).join("") +
+    h += `<p class="p-g">${tit}</p>${l.length ? "" : `<p class="nota" style="margin:2px 0 0">${ayuda}</p>`}` + l.map(it => edItem(it, items, M, act.has(it.id), pun)).join("") +
       `<button type="button" class="btn2" data-add="${t}" style="margin-top:6px">Agregar ${t === "desc" ? "descuento" : "haber"}</button>`;
   });
   return h;
@@ -961,9 +971,32 @@ function edHTML(items, quin, M, act) {
 function edMontos(box, c) {
   box.querySelectorAll("[data-m]").forEach(el => { const v = c.montos[el.dataset.m]; el.textContent = v != null && c.activos.has(el.dataset.m) ? money(v) : ""; });
 }
+// Vista simple de un perfil ya armado: solo lo que cambia cada cobro (valor de la hora, horas, %, importes).
+// Los descuentos y el detalle de cada concepto quedan en "Editar perfil".
+const unidDe = n => /d[ií]a/i.test(n || "") ? "días" : /hora|\bhs\b/i.test(n || "") ? "hs" : "";
+function simpleHTML(items, act) {
+  const vis = items.filter(x => act.has(x.id) && x.t !== "desc");
+  const lab = x => esc(x.n || "Concepto");
+  const campo = x => {
+    const id = esc(x.id);
+    if (x.f === "fijo") return `<div class="fld"><label>${lab(x)}</label><div class="in pre"><span>$</span><input data-id="${id}" data-f="m" inputmode="decimal" value="${fmtIn(x.m)}"></div></div>`;
+    if (x.f === "pct") return `<div class="fld"><label>${lab(x)}</label><div class="in suf"><input data-id="${id}" data-f="p" inputmode="decimal" value="${fmtIn(x.p)}"><span>%</span></div></div>`;
+    const u = unidDe(x.n), inp = `<input data-id="${id}" data-f="cant" inputmode="decimal" value="${fmtIn(x.cant)}">`;
+    return `<div class="fld"><label>${lab(x)}</label>${u ? `<div class="in suf">${inp}<span>${u}</span></div>` : inp}</div>`;
+  };
+  const valor = x => `<div class="fld"><label>${/hora/i.test(x.n || "") ? "Valor de la hora" : "Valor de " + lab(x)}</label><div class="in pre"><span>$</span><input data-id="${esc(x.id)}" data-f="u" inputmode="decimal" value="${fmtIn(x.u)}"></div></div>`;
+  const propio = x => !x.ref || !items.some(y => y.id === x.ref);
+  const cant = vis.filter(x => x.t === "rem" && x.f === "cant"), pct = vis.filter(x => x.t === "rem" && x.f === "pct"), fijo = vis.filter(x => x.t === "rem" && x.f === "fijo"), nr = vis.filter(x => x.t === "norem");
+  let h = "";
+  if (cant.length) h += `<p class="p-g">Tus horas</p>` + cant.filter(propio).map(valor).join("") + `<div class="cols2">${cant.map(campo).join("")}</div>`;
+  if (pct.length || fijo.length) h += `<p class="p-g">Adicionales</p>` + (pct.length ? `<div class="cols3">${pct.map(campo).join("")}</div>` : "") + fijo.map(campo).join("");
+  if (nr.length) h += `<p class="p-g">Sumas no remunerativas</p>` + nr.filter(x => x.f === "cant" && propio(x)).map(valor).join("") + `<div class="cols2">${nr.map(campo).join("")}</div>`;
+  if (!h) h = `<p class="nota">Este perfil no tiene nada para cargar en este período.</p>`;
+  return h + `<p class="nota" style="margin-top:12px">Los descuentos salen de tu perfil. Si cambió algo o falta un concepto, tocá "Editar perfil".</p><button type="button" class="btn2" id="genEditar">Editar perfil</button>`;
+}
 function montarEditor(box, ctx) {
   const calc = () => calcItems(ctx.items(), ctx.quin(), ctx.redondeo(), undefined, ctx.per && ctx.per());
-  const pintar = () => { PER_ED = (ctx.per && ctx.per()) || ""; const c = calc(); box.innerHTML = edHTML(ctx.items(), ctx.quin(), c.montos, c.activos); };
+  const pintar = () => { PER_ED = (ctx.per && ctx.per()) || ""; const c = calc(), simple = !!(ctx.simple && ctx.simple()); const h = simple ? simpleHTML(ctx.items(), c.activos) : edHTML(ctx.items(), ctx.quin(), c.montos, c.activos, ctx.puntual); box.innerHTML = ctx.envolver ? ctx.envolver(h, simple) : h; };
   const refrescar = () => edMontos(box, calc());
   const buscar = el => { const c = el.closest("[data-id]"); return c ? ctx.items().find(x => x.id === c.dataset.id) : null; };
   box.addEventListener("input", e => {
@@ -1029,6 +1062,7 @@ function sincCfgDeItems() {
 }
 function cambiarPerfil(id) {
   const p = S.plan.perfiles.find(x => x.id === id); if (!p) return;
+  EDITANDO = false;
   S.plan.actual = id; S.plan.items = p.items; S.cfg.redondeo = !!p.redondeo;
   sincCfgDeItems(); guardar("plan"); guardar("cfg");
   pintarCfg(); pintarGen(); todo();
@@ -1043,7 +1077,9 @@ $("perfilSel").addEventListener("change", e => cambiarPerfil(e.target.value));
 function itemsEjemplo() {
   const N = itemNuevo({n: "Horas normales", c: "100", f: "cant", cant: 88, u: 5800}), s = [N];
   const add = o => { const x = itemNuevo(o); s.push(x); return x; };
+  add({n: "Horas de feriado", c: "102", f: "cant", cant: 0, ref: N.id, mult: 1});
   add({n: "Horas extra al 50%", c: "101", f: "cant", cant: 6, ref: N.id, mult: 1.5});
+  add({n: "Horas extra al 100%", c: "103", f: "cant", cant: 0, ref: N.id, mult: 2});
   add({n: "Presentismo", c: "110", f: "pct", p: 8.33, base: {k: "set", ids: [N.id]}});
   add({n: "Premio", c: "120", f: "pct", p: 10, base: {k: "set", ids: [N.id]}});
   const A = add({n: "Adicional por título", c: "130", f: "fijo", m: 18500});
@@ -1161,7 +1197,7 @@ $("aumLista").addEventListener("click", e => {
 $("perfilNuevo").onclick = () => {
   const n = prompt("Nombre del perfil nuevo (por ejemplo, la empresa):", ""); if (n == null || !n.trim()) return;
   const p = {id: nuevoId(), nombre: n.trim(), items: [], redondeo: !!S.cfg.redondeo};
-  S.plan.perfiles.push(p); cambiarPerfil(p.id);
+  S.plan.perfiles.push(p); cambiarPerfil(p.id); EDITANDO = true; pintarGen();
 };
 $("perfilRen").onclick = () => {
   const p = perfilActual(); if (!p) return;
@@ -1175,13 +1211,24 @@ $("perfilDel").onclick = () => {
   else { S.plan.actual = ""; S.plan.items = []; guardar("plan"); pintarGen(); todo(); }
 };
 let GEN = null;
+// (EDITANDO)      ¿se está armando o editando el perfil? (si no, se ve la vista simple de todos los días)
 function pintarGen() {
   asegurarPerfiles(); pintarPerfiles();
   { const ps = S.plan.perfiles || []; $("primeraVez").hidden = !(ps.length === 1 && ps[0].def); }
+  const simple = () => !EDITANDO && S.plan.items.length > 0;
   if (!GEN) GEN = montarEditor($("genBox"), {items: () => S.plan.items, quin: () => parseInt($("quin").value), redondeo: () => S.cfg.redondeo,
-                                               per: () => $("per").value, cambio: () => { $("okGuardado").hidden = true; sincCfgDeItems(); guardar("plan"); guardar("cfg"); todo(); }});
+    per: () => $("per").value, simple, puntual: false,
+    envolver: (h, sim) => sim ? h : `<div class="syrow" style="margin:0 0 6px"><div><b>Armando tu perfil</b><small>Acá cambiás los conceptos, los descuentos y cómo se calcula cada uno.</small></div><div><button type="button" class="btn2" id="genListo"${S.plan.items.length ? "" : " hidden"}>Listo</button></div></div>` + h,
+    cambio: () => { $("okGuardado").hidden = true; sincCfgDeItems(); guardar("plan"); guardar("cfg"); todo(); }});
+  const sim = simple();
+  $("genH").textContent = sim ? "Tus datos de este cobro" : "Los conceptos de tu recibo";
+  $("genSub").textContent = sim ? "Poné lo que cambió este período: horas, días o importes." : "Cada renglón de tu recibo es un concepto y cada uno se calcula de una forma. Lo más fácil es subir tu recibo arriba y se arma solo.";
   GEN.pintar(); pintarAum();
 }
+$("genBox").addEventListener("click", e => {
+  const b = e.target.closest("#genEditar, #genListo"); if (!b) return;
+  EDITANDO = b.id === "genEditar"; pintarGen();
+});
 
 // ---------- parámetros editables ----------
 function pintarCfg() {
@@ -1443,11 +1490,12 @@ document.querySelectorAll(".seg").forEach(seg => {
 });
 
 // ---------- pestañas y eventos ----------
-function todo() { pintarSueldo(); pintarSac(); if ($("modo").value === "gen" && typeof pintarAum === "function") pintarAum(); }
+function pintarParitarias() { asegurarPerfiles(); const P = perfilActual(); $("parPerfil").textContent = P ? "Perfil: " + P.nombre + ". Los aumentos se aplican a los conceptos de ese perfil." : ""; pintarAum(); }
+function todo() { pintarSueldo(); pintarSac(); if (typeof pintarAum === "function" && (TAB === "P" || $("modo").value === "gen")) pintarAum(); }
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   TAB = b.dataset.tab;
   document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
-  $("tab-sueldo").hidden = TAB !== "S"; $("tab-sac").hidden = TAB !== "C"; $("tab-hist").hidden = TAB !== "H"; if (TAB === "H") pintarHist();
+  $("tab-sueldo").hidden = TAB !== "S"; $("tab-sac").hidden = TAB !== "C"; $("tab-hist").hidden = TAB !== "H"; $("tab-par").hidden = TAB !== "P"; if (TAB === "H") pintarHist(); if (TAB === "P") pintarParitarias();
   todo(); window.scrollTo(0, 0); barra();
 });
 $("modo").onchange = () => {
@@ -2538,7 +2586,7 @@ function mostrarImp(r) {
     '<label class="check" style="margin-top:10px"><input type="checkbox" id="impRed"' + (IMPD.redondeo ? " checked" : "") + '> Redondear el neto al peso</label>' +
     av + '<div id="impEd"></div><div id="impCmp"></div>' +
     '<div class="syrow" style="border:0;padding:8px 0 0;margin:0"><div></div><div><button type="button" class="btn2" data-imp="ok">Usar estos datos</button><button type="button" class="btn2" data-imp="no">Descartar</button></div></div>';
-  IMPED = montarEditor($("impEd"), {items: () => IMPD.items, quin: () => IMPD.quin, redondeo: () => IMPD.redondeo, per: () => $("impPer").value, cambio: () => { cmpImp(); pintarDif(); }});
+  IMPED = montarEditor($("impEd"), {items: () => IMPD.items, quin: () => IMPD.quin, redondeo: () => IMPD.redondeo, per: () => $("impPer").value, puntual: true, cambio: () => { cmpImp(); pintarDif(); }});
   IMPED.pintar(); cmpImp(); notaDestino(); pintarDif();
   $("impRes").hidden = false;
 }
@@ -2565,6 +2613,7 @@ function aplicarImp() {
   sincCfgDeItems();
   guardar("plan", true); guardar("cfg");
   seg("modo", "gen"); seg("quin", String(d.quin));
+  EDITANDO = false;
   pintarCfg(); pintarGen(); todo();
   const c = calcSueldo();
   if (d.neto > 0 && per) { const hh = S.hist[per] || (S.hist[per] = {m: "", a: "", b: ""}); (hh.real = hh.real || {})[c.quin] = d.neto; (hh.snap = hh.snap || {})[c.quin] = {items: clonar(S.plan.items), red: !!perfil.redondeo}; hh.t = Date.now(); guardar(); }
