@@ -62,12 +62,14 @@ body{margin:0;background:var(--paper);color:var(--ink);font:400 1rem/1.45 var(--
 .top{max-width:1040px;margin:0 auto;padding:24px 16px 12px}
 .top h1{margin:0;font:800 clamp(1.75rem,7vw,2.4rem)/1.04 var(--disp);letter-spacing:-.025em}
 .top p{margin:8px 0 0;color:var(--mut);font-size:.92rem;max-width:44ch}
+.cobroActs .btn2{min-height:44px}
+@media(max-width:600px){.cobroActs>*{flex:1 1 100%!important;width:100%}}
 .tabs{position:sticky;top:0;z-index:20;background:var(--paper);padding:8px 16px 10px}
 .tabs-in{max-width:1040px;margin:0 auto}
-.tabs-in div{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;background:var(--fill);border-radius:13px;padding:4px}
-.tabs button{min-height:44px;border:0;border-radius:10px;background:none;color:var(--mut);font:600 .98rem var(--sans);cursor:pointer}
+.tabs-in div{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--fill);border-radius:13px;padding:4px}
+.tabs button{min-height:44px;border:0;border-radius:10px;background:none;color:var(--mut);font:600 .9rem var(--sans);cursor:pointer;padding:0 2px}
 .tabs button.on{background:var(--on);color:var(--ink);box-shadow:0 1px 3px #0003}
-@media(min-width:900px){.tabs-in div{max-width:560px}}
+@media(min-width:900px){.tabs-in div{max-width:640px}}
 
 main{max-width:1040px;margin:0 auto;padding:8px 16px 130px}
 
@@ -232,6 +234,7 @@ input:disabled{opacity:.45}
 .sp-bar i{display:block;height:100%;width:0;background:#8fdcb4;border-radius:3px;animation:spBar 1.3s 1s cubic-bezier(.4,0,.2,1) forwards}
 .sp-by{position:absolute;left:0;right:0;bottom:max(30px,env(safe-area-inset-bottom));font:500 .78rem var(--sans);letter-spacing:.08em;color:#f1f5efa6;opacity:0;animation:spUp .7s 1.2s forwards}
 .sp-by b{font-weight:700;color:#f1f5ef;letter-spacing:.1em}
+.sp-v{display:block;margin-top:6px;font-weight:500;letter-spacing:.06em;color:#f1f5ef80}
 @keyframes spDraw{to{stroke-dashoffset:0}}@keyframes spIn{to{opacity:1}}@keyframes spPop{to{transform:scale(1)}}@keyframes spUp{to{opacity:1;transform:none}}@keyframes spBar{to{width:100%}}
 @media (prefers-reduced-motion:reduce){#splash *{animation-duration:.01s!important;animation-delay:0s!important}}
 .hscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:6px -4px 0;padding-bottom:4px}.hscroll svg{display:block;max-width:none}
@@ -258,11 +261,13 @@ input:disabled{opacity:.45}
   <div class="sp-n">Mi Recibo</div>
   <div class="sp-t">Tu sueldo, claro</div>
   <div class="sp-bar"><i></i></div>
-  <div class="sp-by">Personal Project by <b>Diosito</b></div>
+  <div class="sp-by">Personal Project by <b>Diosito</b><span class="sp-v" id="spV"></span></div>
 </div>
 <script>
+window.APP_VERSION = "2.1.0";
 (function () {
   var s = document.getElementById("splash"); if (!s) return;
+  var sv = document.getElementById("spV"); if (sv) sv.textContent = "Versión " + window.APP_VERSION;
   var t0 = Date.now(), quitar = function () { if (s.parentNode) s.parentNode.removeChild(s); };
   var cerrar = function () { s.className = "fuera"; setTimeout(quitar, 650); };
   try {
@@ -285,6 +290,7 @@ input:disabled{opacity:.45}
   <button class="on" data-tab="S">Sueldo</button>
   <button data-tab="C">Aguinaldo</button>
   <button data-tab="H">Historial</button>
+  <button data-tab="P">Paritarias</button>
 </div></div></nav>
 
 <main>
@@ -305,7 +311,7 @@ input:disabled{opacity:.45}
     <section class="sheet" id="cobroCard" style="padding:14px">
       <b>Cuándo cobrás</b> <span class="nota">(1ª quincena el 19, o el día hábil siguiente)</span>
       <div id="cobroTxt" style="margin:6px 0 8px" aria-live="polite"></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <div class="cobroActs" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <select id="cobroN" aria-label="Día hábil de cobro" style="height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"><option value="4">2ª quincena: 4º día hábil</option><option value="45">2ª quincena: 4º o 5º día hábil</option><option value="5">2ª quincena: 5º día hábil</option></select>
         <button type="button" class="btn2" id="cobroNoti">Activar avisos en este celu</button>
         <button type="button" class="btn2" id="cobroIcs">Avisos en mi calendario (cierre y cobro)</button>
@@ -359,39 +365,16 @@ input:disabled{opacity:.45}
       <p class="sub" id="genSub">Cada renglón de tu recibo es un concepto y cada uno se calcula de una forma. Lo más fácil es subir tu recibo arriba y se arma solo. Después, cada mes solo cambiás lo que varía: horas, días o valor.</p>
       <div id="primeraVez" hidden style="margin:10px 0;padding:14px;border:1.5px solid var(--line);border-radius:12px;background:var(--sheet)">
         <b>Para empezar</b>
-        <p class="nota" style="margin:6px 0 10px">Lo mejor es cargar tu recibo (foto o PDF): así arma solo tus conceptos y tus descuentos. Mientras tanto te dejé un perfil de ejemplo con números inventados. Cuando cargues tu recibo se crea tu perfil.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" id="pvCargar">Cargar mi recibo</button><button type="button" class="btn2" id="pvEjemplo">Sigo con el ejemplo</button></div>
+        <p class="nota" style="margin:6px 0 10px">Elegí cómo armar tu perfil. Si sos de Repicky, ya está listo con tus conceptos y descuentos y solo cargás tus números. Si sos de otra empresa, cargá tu recibo (foto o PDF) y se arma solo. Mientras no elijas, ves un perfil de ejemplo con números inventados.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" id="pvRepicky">Soy de Repicky</button><button type="button" class="btn2" id="pvCargar">Cargar mi recibo (otra empresa)</button></div>
       </div>
       <div class="fld" style="margin-top:10px"><label for="perfilSel">Perfil</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><select id="perfilSel" style="flex:1 1 180px;min-width:0;height:44px;padding:0 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></select>
         <button type="button" class="btn2" id="perfilRen">Renombrar</button><button type="button" class="btn2" id="perfilDel">Borrar</button><button type="button" class="btn2" id="perfilNuevo">Nuevo</button></div>
         <p class="nota">Si cargás un recibo distinto (otra empresa u otro convenio) se crea un perfil aparte. Acá cambiás de uno a otro.</p></div>
+      <p class="ok" id="repMsg" hidden></p>
       <div id="genBox"></div>
       <label class="check" style="margin-top:14px"><input type="checkbox" id="redondeo2"> Redondear el neto al peso</label>
-      <div id="aumBox" style="margin-top:18px">
-        <p class="p-g">Aumentos y paritarias</p>
-        <p class="nota" style="margin:2px 0 8px">Si ya sabés que viene un aumento, cargalo y mirá cuánto vas a cobrar en los próximos meses. Cuando te lo paguen, tocá "Aplicar ahora" y se suma a tus valores.</p>
-        <div id="aumLista"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">
-          <label style="flex:1 1 150px;font-size:.82rem">Tipo<select id="aumTipo" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"><option value="pct">Aumento en %</option><option value="suma">Suma fija por mes</option></select></label>
-          <label style="flex:1 1 130px;font-size:.82rem">Desde<input type="month" id="aumDesde" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
-        </div>
-        <div id="aumFPct" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">
-          <label style="flex:1 1 150px;font-size:.82rem">Aumento %<input id="aumPct" inputmode="decimal" placeholder="8" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
-          <label style="flex:2 1 200px;font-size:.82rem">Sube<select id="aumSobre" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"><option value="todo">Todos los importes de haberes</option><option value="basico">Solo el básico (valor hora o sueldo)</option></select></label>
-          <label style="flex:1 1 100%;font-size:.82rem">Si viene en tramos, un % por mes (opcional)<input id="aumTramos" placeholder="Ej: 2 2 1,5  (un aumento por mes desde el mes elegido)" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
-        </div>
-        <div id="aumFSuma" style="display:none;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">
-          <label style="flex:1 1 150px;font-size:.82rem">Monto $<input id="aumMonto" inputmode="decimal" placeholder="50000" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
-          <label style="flex:2 1 200px;font-size:.82rem">Nombre<input id="aumNombre" placeholder="Suma no remunerativa paritaria" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
-          <label style="flex:1 1 150px;font-size:.82rem">Tipo de suma<select id="aumRem" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"><option value="norem">No remunerativa (sin descuentos)</option><option value="rem">Remunerativa (con descuentos)</option></select></label>
-          <label style="flex:1 1 150px;font-size:.82rem">Se cobra<select id="aumQ" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"><option value="0">En cada recibo</option><option value="1">Solo 1ª quincena</option><option value="2">Solo 2ª quincena</option></select></label>
-          <p class="nota" style="flex:1 1 100%;margin:0">Si cargás otra suma con el mismo nombre en un mes más adelante, pisa el monto anterior. Sirve para las sumas que van subiendo.</p>
-        </div>
-        <button type="button" class="btn2" id="aumAdd" style="margin-top:8px">Agregar</button>
-        <div id="aumRetro" style="margin-top:12px"></div>
-        <div id="aumProy" style="margin-top:12px"></div>
-      </div>
     </section>
 
     <section class="grp" id="g-hora" hidden>
@@ -443,6 +426,38 @@ input:disabled{opacity:.45}
       <p class="nota" id="n-norem">Lo no remunerativo se suma a lo que cobrás y no tiene descuentos de ley.</p>
     </section>
   </form>
+</div>
+
+<!-- ============================ PARITARIAS ============================ -->
+<div class="hist" id="tab-par" hidden>
+  <section class="grp">
+    <h2>Aumentos y paritarias</h2>
+    <p class="sub" id="parPerfil"></p>
+      <div id="aumBox">
+        
+        <p class="nota" style="margin:2px 0 8px">Si ya sabés que viene un aumento, cargalo y mirá cuánto vas a cobrar en los próximos meses. Cuando te lo paguen, tocá "Aplicar ahora" y se suma a tus valores.</p>
+        <div id="aumLista"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">
+          <label style="flex:1 1 150px;font-size:.82rem">Tipo<select id="aumTipo" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"><option value="pct">Aumento en %</option><option value="suma">Suma fija por mes</option></select></label>
+          <label style="flex:1 1 130px;font-size:.82rem">Desde<input type="month" id="aumDesde" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
+        </div>
+        <div id="aumFPct" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">
+          <label style="flex:1 1 150px;font-size:.82rem">Aumento %<input id="aumPct" inputmode="decimal" placeholder="8" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
+          <label style="flex:2 1 200px;font-size:.82rem">Sube<select id="aumSobre" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"><option value="todo">Todos los importes de haberes</option><option value="basico">Solo el básico (valor hora o sueldo)</option></select></label>
+          <label style="flex:1 1 100%;font-size:.82rem">Si viene en tramos, un % por mes (opcional)<input id="aumTramos" placeholder="Ej: 2 2 1,5  (un aumento por mes desde el mes elegido)" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
+        </div>
+        <div id="aumFSuma" style="display:none;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">
+          <label style="flex:1 1 150px;font-size:.82rem">Monto $<input id="aumMonto" inputmode="decimal" placeholder="50000" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
+          <label style="flex:2 1 200px;font-size:.82rem">Nombre<input id="aumNombre" placeholder="Suma no remunerativa paritaria" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"></label>
+          <label style="flex:1 1 150px;font-size:.82rem">Tipo de suma<select id="aumRem" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"><option value="norem">No remunerativa (sin descuentos)</option><option value="rem">Remunerativa (con descuentos)</option></select></label>
+          <label style="flex:1 1 150px;font-size:.82rem">Se cobra<select id="aumQ" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"><option value="0">En cada recibo</option><option value="1">Solo 1ª quincena</option><option value="2">Solo 2ª quincena</option></select></label>
+          <p class="nota" style="flex:1 1 100%;margin:0">Si cargás otra suma con el mismo nombre en un mes más adelante, pisa el monto anterior. Sirve para las sumas que van subiendo.</p>
+        </div>
+        <button type="button" class="btn2" id="aumAdd" style="margin-top:8px">Agregar</button>
+        <div id="aumRetro" style="margin-top:12px"></div>
+        <div id="aumProy" style="margin-top:12px"></div>
+      </div>
+  </section>
 </div>
 
 <!-- ============================ HISTORIAL ============================ -->
@@ -580,7 +595,7 @@ input:disabled{opacity:.45}
   <label class="check"><input type="checkbox" id="redondeo"> Redondear el neto al peso</label>
   <button type="button" class="btn2" id="resetCfg" style="margin-top:18px">Volver a los valores originales</button>
 </details>
-<p class="pie">El recibo oficial de tu empleador es el que vale.</p>
+<p class="pie">El recibo oficial de tu empleador es el que vale.<br><span id="pieV" style="opacity:.7"></span></p>
 </main>
 
 <div class="bar" id="bar" hidden><div><span id="barTxt">Neto a cobrar</span><b id="barVal">$ 0,00</b></div></div>
@@ -654,7 +669,7 @@ function publicar(pre, d) {
   if (pre === TAB) { $("barTxt").textContent = d.lbl; $("barVal").textContent = money(d.neto); barra(); }
 }
 function barra() {
-  if (TAB === "H") { $("bar").hidden = true; return; }
+  if (TAB === "H" || TAB === "P") { $("bar").hidden = true; return; }
   const h = $(TAB === "S" ? "heroS" : "heroC");
   $("bar").hidden = !(innerWidth < 900 && h.getBoundingClientRect().bottom < 0);
 }
@@ -945,7 +960,7 @@ function edItem(it, items, M, act, pun) {
       ${campos}
       <label>Cuándo<select data-s="q">${optH(0, "Siempre", it.q || 0)}${optH(1, "Solo 1ª quincena", it.q || 0)}${optH(2, "Solo 2ª quincena", it.q || 0)}</select></label>
       <label>Código<input data-f="c" value="${esc(it.c)}" inputmode="numeric" aria-label="Código del concepto"></label>
-      ${pun && (it.t === "norem" || /retroactiv/i.test(sinAc(it.n))) ? `<label class="ck" style="grid-column:1/-1"><input type="checkbox" data-pun${it.vd ? " checked" : ""}> ${it.vd ? "Puntual: solo vale en " + esc(etiqueta(it.vd)) + (it.vh && it.vh !== it.vd ? " a " + esc(etiqueta(it.vh)) : "") : "Es puntual (solo vale en " + (PER_ED ? esc(etiqueta(PER_ED)) : "este mes") + ")"}</label>` : it.vd ? `<p class="nota" style="grid-column:1/-1;margin:0">Puntual: solo vale en ${esc(etiqueta(it.vd))}${it.vh && it.vh !== it.vd ? " a " + esc(etiqueta(it.vh)) : ""}.</p>` : ""}
+      ${pun && (it.t === "norem" || /retroactiv/i.test(sinAc(it.n))) ? `<label class="ck" style="grid-column:1/-1"><input type="checkbox" data-pun${it.vd ? " checked" : ""}> ${it.vd ? "Puntual: solo vale en " + esc(etiqueta(it.vd)) + (it.vh && it.vh !== it.vd ? " a " + esc(etiqueta(it.vh)) : "") : "Es puntual (solo vale en " + (PER_ED ? esc(etiqueta(PER_ED)) : "este mes") + ")"}</label>` : it.vd ? `<label class="ck" style="grid-column:1/-1"><input type="checkbox" data-pun checked> Puntual: solo vale en ${esc(etiqueta(it.vd))}${it.vh && it.vh !== it.vd ? " a " + esc(etiqueta(it.vh)) : ""} (destildá para que valga siempre)</label>` : ""}
     </div>
     <div class="cn-m"><span>${act ? "Da" : "No entra en este período"}</span><b data-m="${esc(it.id)}">${act && M[it.id] != null ? money(M[it.id]) : ""}</b></div></div>`;
 }
@@ -983,7 +998,13 @@ function simpleHTML(items, act) {
   if (pct.length || fijo.length) h += `<p class="p-g">Adicionales</p>` + (pct.length ? `<div class="cols3">${pct.map(campo).join("")}</div>` : "") + fijo.map(campo).join("");
   if (nr.length) h += `<p class="p-g">Sumas no remunerativas</p>` + nr.filter(x => x.f === "cant" && propio(x)).map(valor).join("") + `<div class="cols2">${nr.map(campo).join("")}</div>`;
   if (!h) h = `<p class="nota">Este perfil no tiene nada para cargar en este período.</p>`;
-  return h + `<p class="nota" style="margin-top:12px">Los descuentos salen de tu perfil. Si cambió algo o falta un concepto, tocá "Editar perfil".</p><button type="button" class="btn2" id="genEditar">Editar perfil</button>`;
+  return h + `<div style="margin-top:14px"><button type="button" class="btn2" id="genPunAbrir">Agregar un importe de este mes</button>
+    <div id="genPunForm" hidden style="margin-top:10px"><p class="nota" style="margin:0 0 8px">Para una suma que cobrás una sola vez (gratificación, retroactivo, suma no remunerativa). Vale solo en el período que tenés elegido y no se repite en el siguiente.</p>
+      <div class="fld"><label for="punN">Nombre</label><input id="punN" placeholder="Suma no remunerativa"></div>
+      <div class="cols2"><div class="fld"><label for="punM">Monto</label><div class="in pre"><span>$</span><input id="punM" inputmode="decimal"></div></div>
+      <div class="fld"><label for="punT">Tipo</label><select id="punT" style="height:44px;padding:0 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"><option value="norem">No remunerativa (sin descuentos)</option><option value="rem">Remunerativa (con descuentos)</option></select></div></div>
+      <button type="button" class="btn2" id="genPunOk">Agregar</button></div></div>
+    <p class="nota" style="margin-top:12px">Los descuentos salen de tu perfil. Si cambió algo o falta un concepto, tocá "Editar perfil".</p><button type="button" class="btn2" id="genEditar">Editar perfil</button>`;
 }
 function montarEditor(box, ctx) {
   const calc = () => calcItems(ctx.items(), ctx.quin(), ctx.redondeo(), undefined, ctx.per && ctx.per());
@@ -1048,12 +1069,33 @@ function asegurarPerfiles() {
 // para el aguinaldo y los otros modos: los descuentos del perfil quedan también en la configuración
 function sincCfgDeItems() {
   const it = S.plan.items;
-  S.cfg.desc = it.filter(x => x.t === "desc" && x.f === "pct" && num(x.p)).map(x => ({n: x.n || "Descuento", p: num(x.p), b: "total", c: x.c || ""}));
+  S.cfg.desc = it.filter(x => x.t === "desc" && x.f === "pct" && num(x.p)).map(x => ({n: x.n || "Descuento", p: num(x.p), b: x.base && x.base.k === "set" ? "basico" : "total", c: x.c || ""}));
   S.cfg.fijos = it.filter(x => x.t === "desc" && x.f === "fijo" && num(x.m)).map(x => ({n: x.n || "Descuento fijo", m: num(x.m), q: x.q || 0, c: x.c || ""}));
+  try { sincHoraDeItems(); } catch (e) {}
+}
+// Los datos del perfil (valor de la hora, horas, %, adicional, sumas no remunerativas) se copian al formulario de "Por hora".
+// Si el perfil no tiene horas (es de sueldo mensual), no se toca nada.
+function sincHoraDeItems() {
+  const items = S.plan.items || [], by = {}; items.forEach(x => by[x.id] = x);
+  const quin = parseInt($("quin").value) || 0, per = $("per").value;
+  const act = items.filter(x => x.t === "rem" && cuando(x.q, quin) && vigente(x, per));
+  const nom = x => sinAc(x.n || "").toLowerCase();
+  const cant = act.filter(x => x.f === "cant"), pct = act.filter(x => x.f === "pct");
+  const N = cant.find(x => /normal/.test(nom(x))) || cant.find(x => /hora/.test(nom(x)) && !/extra|feriad|50|100/.test(nom(x)));
+  if (!N) return;
+  const poner = (id, v) => { const el = $(id); if (el) el.value = fmtIn(v); };
+  const hs = re => { const x = cant.find(y => y !== N && re.test(nom(y))); return x ? num(x.cant) : 0; };
+  const pc = re => { const x = pct.find(y => re.test(nom(y))); return x ? num(x.p) : 0; };
+  poner("vh", valorUnit(N, by)); poner("hsN", num(N.cant));
+  poner("hsF", hs(/feriad/)); poner("hs50h", hs(/50/)); poner("hs100h", hs(/100/));
+  poner("presH", pc(/present/)); poner("antigH", pc(/antig/)); poner("premioH", pc(/premio|camcul/));
+  const A = act.find(x => x.f === "fijo" && /titulo/.test(nom(x)));
+  $("adicOn").checked = !!A; poner("adicH", A ? num(A.m) : 0);
+  poner("norem", calcItems(items, quin, false, undefined, per).totalNorem);
 }
 function cambiarPerfil(id) {
   const p = S.plan.perfiles.find(x => x.id === id); if (!p) return;
-  EDITANDO = false;
+  EDITANDO = false; if ($("repMsg")) $("repMsg").hidden = true;
   S.plan.actual = id; S.plan.items = p.items; S.cfg.redondeo = !!p.redondeo;
   sincCfgDeItems(); guardar("plan"); guardar("cfg");
   pintarCfg(); pintarGen(); todo();
@@ -1081,8 +1123,31 @@ function itemsEjemplo() {
   add({n: "Seguro de vida", c: "320", t: "desc", f: "fijo", m: 4500, q: 2});
   return s;
 }
-$("pvEjemplo").onclick = () => {
-  perfilActual().def = false; guardar("plan"); pintarGen();
+// Perfil Repicky (convenio UOM): los conceptos y descuentos del recibo. Sin datos personales: cada uno carga su valor de hora, horas, antigüedad y adicional.
+// No lleva sumas no remunerativas: no se repiten de una quincena a otra; se agregan con "Agregar un importe de este mes".
+function itemsRepicky() {
+  const N = itemNuevo({n: "Horas normales", c: "1", f: "cant", cant: 0, u: 0}), s = [N];
+  const add = o => { const x = itemNuevo(o); s.push(x); return x; };
+  add({n: "Horas extra al 50%", c: "3", f: "cant", cant: 0, ref: N.id, mult: 1.5});
+  add({n: "Presentismo", c: "615", f: "pct", p: 10, base: {k: "set", ids: [N.id]}});
+  add({n: "Premio (Pr CamCul)", c: "616", f: "pct", p: 14, base: {k: "set", ids: [N.id]}});
+  const A = add({n: "Adicional de título", c: "721", f: "fijo", m: 0});
+  const AN = add({n: "Antigüedad", c: "730", f: "pct", p: 0, base: {k: "set", ids: [N.id]}});
+  add({n: "Jubilación Reparto", c: "3001", t: "desc", f: "pct", p: 11, base: {k: "rem", ids: []}});
+  add({n: "O. Social UOM", c: "3004", t: "desc", f: "pct", p: 2.55, base: {k: "rem", ids: []}});
+  add({n: "Fondo Solidario", c: "3030", t: "desc", f: "pct", p: 0.45, base: {k: "rem", ids: []}});
+  add({n: "Ley 19032 INSSJP", c: "3032", t: "desc", f: "pct", p: 3, base: {k: "rem", ids: []}});
+  add({n: "U.O.M. Sindicato", c: "3051", t: "desc", f: "pct", p: 2.5, base: {k: "set", ids: [N.id, AN.id, A.id]}});
+  add({n: "Seguro Vida UOM", c: "3080", t: "desc", f: "fijo", m: 8367.48, q: 2});
+  return s;
+}
+$("pvRepicky").onclick = () => {
+  const act = perfilActual(), items = itemsRepicky();
+  if (act && act.def) { act.items = items; act.nombre = "Repicky"; act.redondeo = true; act.def = false; S.plan.items = items; S.cfg.redondeo = true; }
+  else { const pf = {id: nuevoId(), nombre: "Repicky", items, redondeo: true}; S.plan.perfiles.push(pf); S.plan.actual = pf.id; S.plan.items = items; S.cfg.redondeo = true; }
+  EDITANDO = false; sincCfgDeItems(); guardar("plan"); guardar("cfg");
+  const m = $("repMsg"); m.textContent = "Perfil Repicky listo. Cargá el valor de tu hora, tus horas, tu antigüedad y tu adicional de título; lo demás ya está."; m.hidden = false;
+  pintarCfg(); pintarGen(); todo();
 };
 $("pvCargar").onclick = () => { $("impBtn").scrollIntoView({block: "center", behavior: "smooth"}); $("impBtn").click(); };
 // ---------- aumentos y proyección ----------
@@ -1217,6 +1282,14 @@ function pintarGen() {
   GEN.pintar(); pintarAum();
 }
 $("genBox").addEventListener("click", e => {
+  const pb = e.target.closest("#genPunAbrir, #genPunOk");
+  if (pb) {
+    if (pb.id === "genPunAbrir") { const f = $("genPunForm"); f.hidden = !f.hidden; if (!f.hidden) $("punN").focus(); return; }
+    const monto = num($("punM").value), per = $("per").value, q = parseInt($("quin").value) || 0;
+    if (!monto || !per) { $("punM").focus(); return; }
+    S.plan.items.push(itemNuevo({n: ($("punN").value || "").trim() || ($("punT").value === "norem" ? "Suma no remunerativa" : "Importe del mes"), t: $("punT").value, f: "fijo", m: monto, q, vd: per, vh: per}));
+    sincCfgDeItems(); guardar("plan"); guardar("cfg"); pintarGen(); todo(); return;
+  }
   const b = e.target.closest("#genEditar, #genListo"); if (!b) return;
   EDITANDO = b.id === "genEditar"; pintarGen();
 });
@@ -1481,11 +1554,12 @@ document.querySelectorAll(".seg").forEach(seg => {
 });
 
 // ---------- pestañas y eventos ----------
-function todo() { pintarSueldo(); pintarSac(); if ($("modo").value === "gen" && typeof pintarAum === "function") pintarAum(); }
+function pintarParitarias() { asegurarPerfiles(); const P = perfilActual(); $("parPerfil").textContent = P ? "Perfil: " + P.nombre + ". Los aumentos se aplican a los conceptos de ese perfil." : ""; pintarAum(); }
+function todo() { pintarSueldo(); pintarSac(); if (typeof pintarAum === "function" && (TAB === "P" || $("modo").value === "gen")) pintarAum(); }
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   TAB = b.dataset.tab;
   document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
-  $("tab-sueldo").hidden = TAB !== "S"; $("tab-sac").hidden = TAB !== "C"; $("tab-hist").hidden = TAB !== "H"; if (TAB === "H") pintarHist();
+  $("tab-sueldo").hidden = TAB !== "S"; $("tab-sac").hidden = TAB !== "C"; $("tab-hist").hidden = TAB !== "H"; $("tab-par").hidden = TAB !== "P"; if (TAB === "H") pintarHist(); if (TAB === "P") pintarParitarias();
   todo(); window.scrollTo(0, 0); barra();
 });
 $("modo").onchange = () => {
@@ -2997,7 +3071,7 @@ function pintarNoti() {
   const p = Notification.permission;
   b.textContent = p === "granted" ? "Probar un aviso" : "Activar avisos en este celu";
   t.textContent = p === "granted" ? "Avisos activados. Te aviso el día antes y el mismo día del cierre y del cobro. Android los manda cuando despierta la app (más o menos una vez al día), así que la hora no es exacta. Si querés una alarma a hora fija, usá el calendario."
-    : p === "denied" ? "Bloqueaste los avisos de este sitio. Se activan desde los ajustes del navegador, en permisos del sitio." : "Los avisos llegan como cualquier notificación del celu.";
+    : p === "denied" ? "Bloqueaste los avisos de este sitio. Se activan desde los ajustes del navegador, en permisos del sitio." : "Los avisos llegan como cualquier notificación del celu." + (/android/i.test(navigator.userAgent) && !(window.matchMedia && matchMedia("(display-mode: standalone)").matches) ? " En Android funcionan mejor con la app instalada (menú ⋮ → Instalar aplicación)." : "");
   b.hidden = p === "denied";
 }
 $("cobroNoti").onclick = async () => {
@@ -3039,11 +3113,13 @@ if (/android/i.test(navigator.userAgent) && !esApp() && !instOculto()) {   // Br
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register("sw.js").catch(() => {});
 
 // ---------- arranque ----------
+$("pieV").textContent = "Mi Recibo · versión " + window.APP_VERSION; try { console.info("Mi Recibo v" + window.APP_VERSION); } catch (e) {}
 const hoy = new Date();
 $("per").value = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
 $("sacAnio").value = hoy.getFullYear();
 $("quin").value = "2"; $("modo").value = S.modo || (S.plan.items.length || PRIMERA ? "gen" : "hora"); $("sacSem").value = hoy.getMonth() < 6 ? "1" : "2";
 document.querySelectorAll(".seg").forEach(seg => seg.querySelectorAll("button").forEach(b => b.setAttribute("aria-checked", String(b.dataset.v === $(seg.dataset.for).value))));
+try { asegurarPerfiles(); sincHoraDeItems(); } catch (e) {}
 pintarCfg(); pintarMeses(); iniciarPdf(); $("modo").onchange();
 pintarSync();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fitAmt($("heroValS")); fitAmt($("heroValC")); });
