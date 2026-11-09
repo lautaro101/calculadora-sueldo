@@ -1,6 +1,6 @@
 /* Service worker de "Mi Recibo": deja usar la app sin conexión.
    Si cambiás index.html, subí el archivo y listo: con internet siempre baja la versión nueva. */
-const VERSION = "2.1.3";                                  // misma que APP_VERSION en index.html
+const VERSION = "2.1.4";                                  // misma que APP_VERSION en index.html
 const V = "mi-recibo-v" + VERSION;
 const AV = "calc-avisos";                               // aquí se guardan los próximos avisos (no se borra al actualizar)
 const SHELL = ["./", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
