@@ -297,6 +297,11 @@ input:disabled{opacity:.45}
 .cb-fer{margin-top:14px;border-top:1px solid var(--line)}
 .cb-fer summary{padding:14px 0 6px;cursor:pointer;font-weight:600;font-size:.9rem}
 .cb-fer p{margin:6px 0 10px;color:var(--mut);font-size:.84rem;line-height:1.5}
+.cb-auto{margin:10px 0 6px}
+.cb-auto .btn2{width:100%}
+.cb-autoTxt{margin:8px 0 12px!important}
+.cb-autoTxt.ok{color:var(--net)}
+.cb-autoTxt.err{color:var(--desc)}
 
 /* ======================================================================
    ESCRITORIO (≥ 900 px): más aire, letra más grande y mejor uso del ancho.
@@ -441,7 +446,7 @@ input:disabled{opacity:.45}
   <div class="sp-by">Personal Project by <b>Diosito</b><span class="sp-v" id="spV"></span></div>
 </div>
 <script>
-window.APP_VERSION = "2.1.4";
+window.APP_VERSION = "2.1.6";
 (function () {
   var s = document.getElementById("splash"); if (!s) return;
   var sv = document.getElementById("spV"); if (sv) sv.textContent = "Versión " + window.APP_VERSION;
@@ -498,7 +503,12 @@ window.APP_VERSION = "2.1.4";
       </div>
       <p class="cb-note" id="cobroNotiTxt"></p>
       <details class="cb-fer"><summary>Feriados que se descuentan</summary>
-        <p>Sábados, domingos y feriados no cuentan. Ya cargué los feriados nacionales de 2026 y 2027. Si falta alguno (un puente o un feriado de tu provincia), agregalo acá así: AAAA-MM-DD, separados por coma.</p>
+        <p>Sábados, domingos y feriados no cuentan para el día hábil de cobro.</p>
+        <div class="cb-auto">
+          <button type="button" class="btn2" id="ferAct">Actualizar feriados desde internet</button>
+          <p class="cb-autoTxt" id="ferActTxt" aria-live="polite"></p>
+        </div>
+        <p>Si falta alguno (un puente nuevo o un feriado de tu provincia), agregalo acá así: AAAA-MM-DD, separados por coma.</p>
         <input id="cobroFer" placeholder="2027-03-22, 2027-07-12">
       </details>
     </section>
@@ -811,7 +821,6 @@ const CFG0 = {
   fijos: [],
   redondeo: true
 };
-const PRIMERA = (() => { try { return !localStorage.getItem("calc_sueldo_v2"); } catch (e) { return true; } })();   // ¿es la primera vez que se abre?
 let S = {cfg: JSON.parse(JSON.stringify(CFG0)), hist: {}};
 try {
   const g = JSON.parse(localStorage.getItem("calc_sueldo_v2"));
@@ -820,6 +829,8 @@ try {
 } catch (e) {}
 S.pdf = S.pdf || {};
 S.plan = S.plan && Array.isArray(S.plan.items) ? S.plan : {items: []};   // los conceptos de tu recibo (modo "Mi recibo")
+// ¿es la primera vez? Se decide por lo guardado (todavía no hay ningún perfil), no porque falte la clave: si ya abriste la app antes en ese celular, la clave existe aunque nunca hayas armado un perfil.
+const PRIMERA = !S.plan.items.length && !(S.plan.perfiles || []).some(p => !p.def);
 S.ts = S.ts || {cfg: 0, pdf: 0, plan: 0};
 S.ts.plan = S.ts.plan || 0;   // cuándo se tocó cada parte por última vez (sirve para sincronizar)
 // sec = "cfg" | "pdf" marca esa parte como modificada ahora; quieto = no disparar la sincronización
@@ -3167,7 +3178,8 @@ const FERIADOS = ["2026-01-01","2026-02-16","2026-02-17","2026-03-23","2026-03-2
   // 2027 según la ley (sin puentes, que todavía no se conocen): revisalos cuando salga el calendario oficial
   "2027-01-01","2027-02-08","2027-02-09","2027-03-24","2027-03-26","2027-04-02","2027-05-25","2027-06-21","2027-07-09","2027-08-16","2027-10-11","2027-12-08"];
 const ymd = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-const feriadosSet = () => new Set(FERIADOS.concat(String(S.cfg.fer || "").split(/[,;\s]+/).filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x))));
+const ferAutoDias = () => S.cfg.ferAuto && Array.isArray(S.cfg.ferAuto.dias) ? S.cfg.ferAuto.dias : [];
+const feriadosSet = () => new Set(FERIADOS.concat(ferAutoDias(), String(S.cfg.fer || "").split(/[,;\s]+/).filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x))));
 function diaHabil(anio, mes, n, fer) {          // mes 0-11
   let c = 0;
   for (let d = 1; d <= 31; d++) { const f = new Date(anio, mes, d); if (f.getMonth() !== mes) break; const w = f.getDay(); if (w === 0 || w === 6 || fer.has(ymd(f))) continue; if (++c === n) return f; }
@@ -3221,6 +3233,50 @@ function pintarCobro() {
 }
 $("cobroN").onchange = () => { S.cfg.cobro = $("cobroN").value; guardar("cfg"); pintarCobro(); };
 $("cobroFer").onchange = () => { S.cfg.fer = $("cobroFer").value.trim(); guardar("cfg"); pintarCobro(); };
+// ---------- feriados: se bajan solos de internet (nolaborables.com.ar, datos del calendario oficial) ----------
+async function bajarFeriados(anio) {
+  const r = await fetch("https://nolaborables.com.ar/api/v2/feriados/" + anio, {cache: "no-store"});
+  if (!r.ok) throw new Error("http " + r.status);
+  const L = await r.json(); if (!Array.isArray(L) || !L.length) throw new Error("sin datos");
+  const out = [];
+  L.forEach(h => {
+    if (!h || h.opcional) return;                                   // los optativos (religiosos, de colectividades) no son feriado para todos
+    const dia = h.tipo === "trasladable" && h.traslado ? h.traslado : h.dia;   // si se trasladó, vale el día nuevo
+    if (h.mes >= 1 && h.mes <= 12 && dia >= 1 && dia <= 31) out.push(anio + "-" + String(h.mes).padStart(2, "0") + "-" + String(dia).padStart(2, "0"));
+  });
+  return out;
+}
+function pintarFerAuto(msg, tipo) {
+  const t = $("ferActTxt"); if (!t) return;
+  const fa = S.cfg.ferAuto, anios = fa && fa.dias ? [...new Set(fa.dias.map(d => d.slice(0, 4)))].sort() : [];
+  const est = anios.length ? "Última actualización: " + fa.fecha.split("-").reverse().join("/") + ". Incluye feriados de " + anios.join(" y ") + ". Se actualizan solos una vez por mes cuando hay internet."
+    : "Ahora usa los feriados que trae la app (2026 y 2027). Tocá el botón para traer los más nuevos; después se actualizan solos una vez por mes.";
+  t.textContent = (msg ? msg + " " : "") + est; t.className = "cb-autoTxt" + (tipo ? " " + tipo : "");
+}
+let FER_BUSY = false;
+async function actualizarFeriados(manual) {
+  if (FER_BUSY) return; FER_BUSY = true;
+  const b = $("ferAct"), a0 = new Date().getFullYear(), ok = [], mal = [], nuevos = {};
+  if (manual) { b.disabled = true; b.textContent = "Buscando feriados…"; }
+  S.cfg.ferIntento = Date.now(); guardar("cfg", true);
+  for (const y of [a0, a0 + 1]) { try { nuevos[y] = await bajarFeriados(y); ok.push(y); } catch (e) { mal.push(y); } }
+  if (ok.length) {
+    const viejos = ferAutoDias().filter(d => !ok.includes(+d.slice(0, 4)));
+    S.cfg.ferAuto = {fecha: ymd(new Date()), dias: viejos.concat(...ok.map(y => nuevos[y]))};
+    guardar("cfg"); pintarCobro(); mandarAvisos();
+    if (manual) pintarFerAuto(mal.length ? "Listo, pero " + mal.join(" y ") + " todavía no está publicado." : "Listo, feriados actualizados.", "ok");
+    else pintarFerAuto();
+  } else if (manual) pintarFerAuto("No pude traer los feriados. Revisá tu conexión y probá de nuevo; mientras tanto podés cargarlos a mano abajo.", "err");
+  if (manual) { b.disabled = false; b.textContent = "Actualizar feriados desde internet"; }
+  FER_BUSY = false;
+}
+$("ferAct").onclick = () => actualizarFeriados(true);
+pintarFerAuto();
+(() => {   // al abrir: si hay internet y pasó más de un mes (o nunca se bajaron), se actualizan solos; un intento por día como mucho
+  const fa = S.cfg.ferAuto, viejo = !fa || !fa.fecha || Date.now() - new Date(fa.fecha + "T00:00:00").getTime() > 30 * 864e5;
+  const faltaAnio = !fa || !fa.dias || !fa.dias.some(d => +d.slice(0, 4) === new Date().getFullYear() + 1);
+  if (navigator.onLine !== false && (viejo || faltaAnio) && Date.now() - (S.cfg.ferIntento || 0) > 864e5 && /^https?:$/.test(location.protocol)) setTimeout(() => actualizarFeriados(false), 1500);
+})();
 $("cobroIcs").onclick = () => {
   const L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Mi Recibo//ES", "CALSCALE:GREGORIAN"], dt = d => ymd(d).replace(/-/g, ""), mas = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
   proximosCobros(24).forEach(p => { const ttl = "Cobro " + cobroTitulo(p) + (p.desde.getTime() === p.hasta.getTime() ? "" : " (puede ser hasta el " + fechaLarga(p.hasta) + ")");
@@ -3323,7 +3379,7 @@ $("pieV").textContent = "Mi Recibo · versión " + window.APP_VERSION; try { con
 const hoy = new Date();
 $("per").value = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
 $("sacAnio").value = hoy.getFullYear();
-$("quin").value = "2"; $("modo").value = S.modo || (S.plan.items.length || PRIMERA ? "gen" : "hora"); $("sacSem").value = hoy.getMonth() < 6 ? "1" : "2";
+$("quin").value = "2"; $("modo").value = PRIMERA && !Object.keys(S.hist).length ? "gen" : (S.modo || (S.plan.items.length || PRIMERA ? "gen" : "hora")); $("sacSem").value = hoy.getMonth() < 6 ? "1" : "2";
 document.querySelectorAll(".seg").forEach(seg => seg.querySelectorAll("button").forEach(b => b.setAttribute("aria-checked", String(b.dataset.v === $(seg.dataset.for).value))));
 try { asegurarPerfiles(); sincHoraDeItems(); } catch (e) {}
 pintarCfg(); pintarMeses(); iniciarPdf(); $("modo").onchange();
