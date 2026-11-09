@@ -446,7 +446,38 @@ input:disabled{opacity:.45}
   <div class="sp-by">Personal Project by <b>Diosito</b><span class="sp-v" id="spV"></span></div>
 </div>
 <script>
-window.APP_VERSION = "2.1.6";
+window.APP_VERSION = "2.1.8";
+/* Red de seguridad: si algo falla al arrancar, en vez de dejar la pantalla en blanco se muestra qué pasó y cómo salir. */
+(function () {
+  var mostrado = false;
+  function caja(msg) {
+    if (mostrado) return; mostrado = true;
+    var d = document.createElement("div");
+    d.style.cssText = "position:fixed;inset:0;z-index:99999;overflow:auto;padding:20px;background:#fff;color:#14202c;font:16px/1.45 system-ui,sans-serif";
+    var h = document.createElement("h2"); h.textContent = "Mi Recibo no pudo arrancar"; h.style.margin = "0 0 8px";
+    var t = document.createElement("p"); t.textContent = "Tus datos no se borraron. Probá con estos botones, de arriba hacia abajo:";
+    var pre = document.createElement("pre"); pre.style.cssText = "white-space:pre-wrap;word-break:break-word;background:#eef1ea;padding:10px;border-radius:8px;font-size:13px"; pre.textContent = "v" + window.APP_VERSION + "\n" + msg;
+    function btn(txt, fn) { var b = document.createElement("button"); b.type = "button"; b.textContent = txt; b.style.cssText = "display:block;width:100%;margin:8px 0;padding:14px;font:600 16px system-ui;border:0;border-radius:10px;background:#1c3556;color:#fff"; b.onclick = fn; return b; }
+    function limpiarCache() {
+      var q = [];
+      try { if (navigator.serviceWorker) q.push(navigator.serviceWorker.getRegistrations().then(function (r) { return Promise.all(r.map(function (x) { return x.unregister(); })); })); } catch (e) {}
+      try { if (window.caches) q.push(caches.keys().then(function (k) { return Promise.all(k.map(function (x) { return caches.delete(x); })); })); } catch (e) {}
+      return Promise.all(q).catch(function () {});
+    }
+    d.appendChild(h); d.appendChild(t);
+    d.appendChild(btn("1. Reintentar", function () { location.reload(); }));
+    d.appendChild(btn("2. Limpiar la copia guardada de la app y reintentar", function () { limpiarCache().then(function () { location.reload(); }); }));
+    d.appendChild(btn("3. Borrar mis datos y empezar de cero", function () { if (!confirm("Se borran perfiles e historial de este celular. ¿Seguro?")) return; try { localStorage.clear(); } catch (e) {} limpiarCache().then(function () { location.reload(); }); }));
+    d.appendChild(pre);
+    (document.body || document.documentElement).appendChild(d);
+  }
+  window.addEventListener("error", function (e) { caja((e.message || "error") + (e.lineno ? "  (línea " + e.lineno + ")" : "")); });
+  function ponerVersion() { var v = document.getElementById("pieV"); if (v && !v.textContent) v.textContent = "Mi Recibo · versión " + window.APP_VERSION + (window.__listo ? "" : " · sin terminar de cargar"); }
+  document.addEventListener("DOMContentLoaded", ponerVersion);
+  window.addEventListener("load", function () { setTimeout(function () { ponerVersion(); if (!window.__listo) caja("La app no terminó de cargar (sin mensaje de error)."); }, 1500); });
+  window.addEventListener("unhandledrejection", function (e) { caja("promesa: " + ((e.reason && e.reason.message) || e.reason)); });
+})();
+
 (function () {
   var s = document.getElementById("splash"); if (!s) return;
   var sv = document.getElementById("spV"); if (sv) sv.textContent = "Versión " + window.APP_VERSION;
@@ -827,6 +858,15 @@ try {
   if (g && g.cfg && g.hist) S = g;
   else { const v1 = JSON.parse(localStorage.getItem("calc_sueldo_v1")); if (v1 && v1.hist) S.hist = v1.hist; }  // conserva los recibos guardados
 } catch (e) {}
+(function limpiarEstado() {   // datos de versiones viejas o a medias no deben trabar el arranque
+  const esObj = x => x && typeof x === "object" && !Array.isArray(x);
+  if (!esObj(S)) S = {cfg: JSON.parse(JSON.stringify(CFG0)), hist: {}};
+  if (!esObj(S.cfg)) S.cfg = JSON.parse(JSON.stringify(CFG0));
+  if (!Array.isArray(S.cfg.desc)) S.cfg.desc = JSON.parse(JSON.stringify(CFG0.desc));
+  if (!Array.isArray(S.cfg.fijos)) S.cfg.fijos = [];
+  if (!esObj(S.hist)) S.hist = {};
+  if (esObj(S.plan) && Array.isArray(S.plan.perfiles)) S.plan.perfiles = S.plan.perfiles.filter(p => esObj(p) && Array.isArray(p.items));
+})();
 S.pdf = S.pdf || {};
 S.plan = S.plan && Array.isArray(S.plan.items) ? S.plan : {items: []};   // los conceptos de tu recibo (modo "Mi recibo")
 // ¿es la primera vez? Se decide por lo guardado (todavía no hay ningún perfil), no porque falte la clave: si ya abriste la app antes en ese celular, la clave existe aunque nunca hayas armado un perfil.
@@ -3375,16 +3415,19 @@ if (/android/i.test(navigator.userAgent) && !esApp() && !instOculto()) {   // Br
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register("sw.js").catch(() => {});
 
 // ---------- arranque ----------
-$("pieV").textContent = "Mi Recibo · versión " + window.APP_VERSION; try { console.info("Mi Recibo v" + window.APP_VERSION); } catch (e) {}
+const paso = (nom, f) => { try { f(); } catch (e) { (window.__fallos = window.__fallos || []).push(nom + ": " + (e && e.message || e)); try { console.error("Mi Recibo, paso " + nom, e); } catch (x) {} } };
+paso("version", () => { $("pieV").textContent = "Mi Recibo · versión " + window.APP_VERSION; console.info("Mi Recibo v" + window.APP_VERSION); });
 const hoy = new Date();
-$("per").value = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
-$("sacAnio").value = hoy.getFullYear();
-$("quin").value = "2"; $("modo").value = PRIMERA && !Object.keys(S.hist).length ? "gen" : (S.modo || (S.plan.items.length || PRIMERA ? "gen" : "hora")); $("sacSem").value = hoy.getMonth() < 6 ? "1" : "2";
-document.querySelectorAll(".seg").forEach(seg => seg.querySelectorAll("button").forEach(b => b.setAttribute("aria-checked", String(b.dataset.v === $(seg.dataset.for).value))));
-try { asegurarPerfiles(); sincHoraDeItems(); } catch (e) {}
-pintarCfg(); pintarMeses(); iniciarPdf(); $("modo").onchange();
-pintarSync();
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fitAmt($("heroValS")); fitAmt($("heroValC")); });
+paso("fecha", () => { $("per").value = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0"); $("sacAnio").value = hoy.getFullYear(); });
+paso("modo", () => { $("quin").value = "2"; $("modo").value = PRIMERA && !Object.keys(S.hist).length ? "gen" : (S.modo || (S.plan.items.length || PRIMERA ? "gen" : "hora")); $("sacSem").value = hoy.getMonth() < 6 ? "1" : "2"; });
+paso("botones", () => document.querySelectorAll(".seg").forEach(seg => seg.querySelectorAll("button").forEach(b => b.setAttribute("aria-checked", String(b.dataset.v === $(seg.dataset.for).value)))));
+paso("perfiles", () => { asegurarPerfiles(); sincHoraDeItems(); });
+paso("config", pintarCfg); paso("meses", pintarMeses); paso("pdf", iniciarPdf);
+paso("pantalla", () => $("modo").onchange());
+paso("sync", pintarSync);
+paso("fuentes", () => { if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fitAmt($("heroValS")); fitAmt($("heroValC")); }); });
+window.__listo = true;
+if (window.__fallos && window.__fallos.length) paso("aviso", () => { $("pieV").textContent += " · con fallos: " + window.__fallos.join(" | "); });   // no tapa la app: solo queda escrito abajo de todo
 </script>
 </body>
 </html>
