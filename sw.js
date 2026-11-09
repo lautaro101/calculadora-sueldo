@@ -1,12 +1,15 @@
-/* Service worker de "Mi Recibo": deja usar la app sin conexión.
-   Si cambiás index.html, subí el archivo y listo: con internet siempre baja la versión nueva. */
-const VERSION = "2.1.9";                                  // misma que APP_VERSION en index.html
+/* Service worker de "Mi Recibo": deja usar la app sin conexión y avisa cuando hay una versión nueva.
+   La versión se cambia SOLO en version.js. Subí version.js, index.html y sw.js y, al abrir la app, aparece el aviso con el botón «Actualizar». */
+try { importScripts("version.js"); } catch (e) {}                 // define self.APP_VERSION
+const VERSION = self.APP_VERSION || "sin-version";
 const V = "mi-recibo-v" + VERSION;
 const AV = "calc-avisos";                               // aquí se guardan los próximos avisos (no se borra al actualizar)
-const SHELL = ["./", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
+const SHELL = ["./", "./version.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
+const fresco = u => /\/(index\.html|version\.js)?$/.test(u.pathname);   // la página y version.js: siempre se pide a internet primero
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // sin skipWaiting: la versión nueva espera a que toques «Actualizar» en la app
+  e.waitUntil(caches.open(V).then(c => c.addAll(SHELL.map(u => new Request(u, {cache: "reload"})))));
 });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V && k !== AV).map(k => caches.delete(k)))).then(() => self.clients.claim()));
@@ -16,11 +19,12 @@ self.addEventListener("fetch", e => {
   if (r.method !== "GET") return;
   const u = new URL(r.url);
   if (u.origin !== location.origin) return;            // Google, Microsoft y demás: no se tocan
-  if (r.mode === "navigate") {                          // la página: primero internet, y si no hay, la guardada
-    e.respondWith(fetch(r).then(res => {
-      if (res.ok) { const cp = res.clone(); caches.open(V).then(c => c.put("./", cp)); }
+  if (r.mode === "navigate" || fresco(u)) {             // la página y version.js: primero internet (revalidando), y si no hay, la guardada
+    const clave = r.mode === "navigate" ? "./" : r;
+    e.respondWith(fetch(new Request(r, {cache: "no-cache"})).then(res => {
+      if (res.ok) { const cp = res.clone(); caches.open(V).then(c => c.put(clave, cp)); }
       return res;
-    }).catch(() => caches.match("./")));
+    }).catch(() => caches.match(clave)));
     return;
   }
   e.respondWith(caches.match(r).then(hit => hit || fetch(r).then(res => {   // el resto: lo guardado, y si no, internet
@@ -53,6 +57,7 @@ async function revisarAvisos() {
 }
 self.addEventListener("periodicsync", e => { if (e.tag === "avisos") e.waitUntil(revisarAvisos()); });
 self.addEventListener("message", e => {
+  if (e.data && e.data.tipo === "actualizar") { self.skipWaiting(); return; }   // botón «Actualizar» de la app
   if (e.data && e.data.tipo === "avisos") e.waitUntil(guardarAv("avisos.json", e.data.eventos || []).then(revisarAvisos));
   if (e.data && e.data.tipo === "prueba" && self.Notification && Notification.permission === "granted") e.waitUntil(self.registration.showNotification("Así te va a avisar", {body: "Cuando cierre la quincena o se acerque tu cobro, vas a ver un mensaje como este.", icon: "icon-192.png", tag: "prueba"}));
 });
