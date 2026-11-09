@@ -462,7 +462,7 @@ window.mrCopia = function (motivo, version) {
 };
 try {   // si la app cambió de versión (por ejemplo se actualizó sola), se guarda una copia de los datos de antes
   var vPrev = localStorage.getItem("mr_ult_version");
-  if (vPrev !== window.APP_VERSION) { window.mrCopia("al pasar a la versión " + window.APP_VERSION, vPrev || "anterior"); localStorage.setItem("mr_ult_version", window.APP_VERSION); }
+  if (vPrev !== window.APP_VERSION) { window.mrCopia("al pasar a la versión " + window.APP_VERSION, vPrev || "anterior"); localStorage.setItem("mr_ult_version", window.APP_VERSION); if (vPrev) localStorage.setItem("mr_nov_pend", window.APP_VERSION); }
 } catch (e) {}
 /* Red de seguridad: si algo falla al arrancar, en vez de dejar la pantalla en blanco se muestra qué pasó y cómo salir. */
 (function () {
@@ -3556,6 +3556,7 @@ if (/android/i.test(navigator.userAgent) && !esApp() && !instOculto()) {   // Br
     } else { recargando = true; location.reload(); }
   };
   const mostrarUpd = info => {
+    const nv = document.getElementById("avisoNov"); if (nv) nv.remove();
     const nueva = info && info.v && info.v !== window.APP_VERSION;
     barra("avisoUpd", nueva ? "Hay una versión nueva: " + info.v : "Hay una versión nueva de Mi Recibo", nueva && info.n ? info.n : "",
       [["Actualizar", async x => { x.disabled = true; x.textContent = "Actualizando…"; await aplicar(); }, true]]);
@@ -3601,9 +3602,19 @@ if (/android/i.test(navigator.userAgent) && !esApp() && !instOculto()) {   // Br
     mm.textContent = r.hay ? "" : r.ok ? "Ya tenés la última versión (" + window.APP_VERSION + ")." : "No pude conectar. ¿Tenés internet?";
   };
 
+  // ----- novedades: se muestran una sola vez, después de actualizar -----
+  setTimeout(() => { try {
+    const pend = localStorage.getItem("mr_nov_pend"); if (!pend) return;
+    const notas = String(window.APP_NOVEDADES || "").trim();
+    if (!notas) { localStorage.removeItem("mr_nov_pend"); return; }
+    if (document.getElementById("avisoUpd")) return;                                   // queda pendiente para la próxima vez
+    barra("avisoNov", "Novedades de la versión " + window.APP_VERSION, notas,
+      [["Entendido", (x, b) => { try { localStorage.removeItem("mr_nov_pend"); } catch (e) {} b.remove(); }, true]]);
+  } catch (e) {} }, 2500);
+
   // ----- recordatorio suave: hace más de un mes que no guardás una copia en archivo -----
   setTimeout(() => { try {
-    if (document.getElementById("avisoUpd") || !Object.keys(S.hist || {}).length) return;
+    if (document.getElementById("avisoUpd") || document.getElementById("avisoNov") || !Object.keys(S.hist || {}).length) return;
     const dias = (SY.ult ? Date.now() - SY.ult : Infinity) / 864e5;
     if (dias <= 30 || Date.now() - (+localStorage.getItem(K_REC) || 0) < 3 * 864e5) return;
     localStorage.setItem(K_REC, String(Date.now()));
