@@ -252,6 +252,172 @@ input:disabled{opacity:.45}
 .inst span{flex:1}
 .inst .btn2{color:var(--on-navy);border-color:#f1f5ef80;min-height:36px}
 .inst .x{width:32px;height:36px;border:0;background:none;color:var(--on-navy);font-size:1.3rem;cursor:pointer}
+
+
+/* ---------- cuándo cobrás ---------- */
+.cobro{grid-area:cobro}
+@media(max-width:899px){#tab-sueldo{grid-template-areas:"hero" "form" "cobro" "sheet"}}
+.cobro{background:var(--sheet);border:1.5px solid var(--line);border-radius:20px;padding:20px 18px 16px}
+.cb-head{display:flex;flex-direction:column;gap:2px;margin-bottom:16px}
+.cb-head h2{margin:0;font:800 1.3rem/1.1 var(--disp);letter-spacing:-.015em}
+.cb-head span{color:var(--mut);font-size:.84rem}
+.cb-next{display:flex;gap:16px;align-items:center;padding:14px;border-radius:16px;background:var(--net-bg)}
+.cb-tile{flex:0 0 auto;width:84px;padding:10px 0 9px;border-radius:14px;background:var(--sheet);color:var(--net);text-align:center;display:flex;flex-direction:column;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.cb-tile .w{font-size:.76rem;font-weight:600;color:var(--mut)}
+.cb-tile b{font:800 2.6rem/1.05 var(--disp);letter-spacing:-.03em;margin:5px 0 3px}
+.cb-tile .m{font-size:.88rem;font-weight:600}
+.cb-tile.hoy{background:var(--net);color:var(--sheet)}
+.cb-tile.hoy .w{color:inherit;opacity:.85}
+.cb-info{min-width:0;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.cb-info p{margin:0}
+.cb-f{font:800 1.4rem/1.15 var(--disp);letter-spacing:-.02em}
+.cb-f.rng{font:600 1.02rem/1.3 var(--sans);letter-spacing:0}
+.cb-q{font-size:.92rem}
+.cb-chip{display:inline-block;padding:4px 12px;border-radius:99px;background:var(--sheet);color:var(--net);font-weight:600;font-size:.88rem}
+.cb-chip.hoy{background:var(--net);color:var(--sheet)}
+.cb-cierre{margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--fill);border-left:4px solid var(--mut);display:flex;flex-direction:column;gap:2px;font-size:.92rem}
+.cb-cierre b{font-weight:600}
+.cb-cierre span{color:var(--mut);font-size:.86rem}
+.cb-cierre.cerca{background:var(--warn-bg);border-left-color:var(--warn);color:var(--warn)}
+.cb-cierre.cerca span{color:inherit}
+.cb-sig{margin-top:18px}
+.cb-sig p{margin:0 0 2px;font:600 .9rem var(--sans);color:var(--mut)}
+.cb-r{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:10px 0;border-bottom:1px dotted var(--line);font-size:.92rem}
+.cb-r:last-child{border-bottom:0}
+.cb-r b{font-weight:600;text-align:right}
+@media(max-width:520px){.cb-r{flex-direction:column;gap:1px;padding:9px 0}.cb-r b{order:-1;text-align:left}.cb-r span{color:var(--mut);font-size:.84rem}}
+.cb-set{margin-top:20px;display:flex;flex-direction:column;gap:6px}
+.cb-set label{margin:0;font-size:.86rem;font-weight:600}
+.cb-set select{width:100%;height:48px;padding:0 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)}
+.cb-acts{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}
+.cb-acts .btn2{width:100%;min-height:46px}
+.cb-acts .pri{background:var(--navy);color:var(--on-navy);border-color:var(--navy)}
+.cb-note{margin:12px 0 0;padding:12px 14px;border-radius:12px;background:var(--fill);color:var(--mut);font-size:.84rem;line-height:1.5}
+.cb-note:empty{display:none}
+.cb-fer{margin-top:14px;border-top:1px solid var(--line)}
+.cb-fer summary{padding:14px 0 6px;cursor:pointer;font-weight:600;font-size:.9rem}
+.cb-fer p{margin:6px 0 10px;color:var(--mut);font-size:.84rem;line-height:1.5}
+
+/* ======================================================================
+   ESCRITORIO (≥ 900 px): más aire, letra más grande y mejor uso del ancho.
+   Todo vive en este bloque; el celular no se toca. La opción de tamaño de
+   letra del usuario (data-letra) sigue mandando porque es más específica.
+   ====================================================================== */
+@media(min-width:900px){
+  html{font-size:103%}
+  .top{max-width:1180px;padding:40px 40px 18px}
+  .top h1{font-size:2.9rem}
+  .top p{font-size:1rem;max-width:62ch;margin-top:10px}
+  .tabs{padding:10px 0 14px}
+  .tabs-in{max-width:1180px;padding:0 40px}
+  .tabs-in div{max-width:720px;gap:6px;padding:5px;border-radius:15px}
+  .tabs button{min-height:52px;font-size:1rem;border-radius:11px}
+  main{max-width:1180px;padding:16px 40px 90px}
+
+  .stage{grid-template-columns:minmax(0,500px) minmax(0,1fr);gap:64px}
+  .out{top:100px;max-height:calc(100vh - 116px);overflow-y:auto;overscroll-behavior:contain;padding:0 10px 24px 0;margin-right:-10px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+  .sheet{margin-top:28px}
+
+  .hero{padding:28px 30px 24px;border-radius:24px}
+  .h-top{font-size:1rem}
+  .h-top b{font-size:1.12rem}
+  .h-amt{margin:14px 0 22px;font-size:clamp(3.4rem,6.4vw,5.4rem)}
+  .split{height:14px}
+  .h-note{font-size:.95rem;margin-top:14px}
+
+  .grp{padding:30px 0}
+  .grp:first-child{padding-top:8px}
+  .grp h2{font-size:1.2rem;margin-bottom:6px}
+  .sub{font-size:.92rem;line-height:1.5;margin-bottom:10px}
+  .fld{margin-top:20px}
+  label,.lab{font-size:.94rem;margin-bottom:8px}
+  input[type=text],input[type=number],input[type=month],input[type=date],input:not([type]){height:54px;padding:0 14px;border-radius:12px;font-size:1.05rem}
+  .in.pre input{padding-left:32px}
+  .in.pre>span{left:14px}
+  .in.suf>span{right:14px}
+  .cols2{gap:0 18px}
+  .cols3{gap:0 12px}
+  .nota{font-size:.88rem;line-height:1.5}
+  .seg{padding:4px;border-radius:14px}
+  .seg button{min-height:52px;font-size:.97rem;border-radius:11px}
+  .aviso,.ok{padding:14px 16px;font-size:.93rem;border-radius:12px}
+  .btn{min-height:56px;font-size:1.05rem;border-radius:14px}
+  .btn2{min-height:46px;padding:0 18px;font-size:.93rem;border-radius:12px}
+  .cobroActs .btn2{min-height:46px}
+
+  .cobro{padding:26px 28px 20px;border-radius:24px}
+  .cb-head h2{font-size:1.5rem}
+  .cb-head span{font-size:.92rem}
+  .cb-next{padding:18px 20px;gap:22px;border-radius:18px}
+  .cb-tile{width:100px;padding:12px 0 11px}
+  .cb-tile b{font-size:3.1rem}
+  .cb-f{font-size:1.7rem}
+  .cb-f.rng{font-size:1.15rem}
+  .cb-q,.cb-r{font-size:1rem}
+  .cb-chip{font-size:.95rem;padding:5px 14px}
+  .cb-cierre{padding:14px 18px;font-size:1rem}
+  .cb-cierre span{font-size:.92rem}
+  .cb-r{padding:12px 0}
+  .cb-set select{height:52px}
+  .cb-acts .btn2{min-height:50px}
+  .cb-note{font-size:.9rem;padding:14px 16px}
+  .cb-fer p{font-size:.9rem}
+
+  .cn{padding:16px;margin:12px 0;border-radius:14px}
+  .cn-h{grid-template-columns:1fr 48px;gap:8px}
+  .cn-h input{height:50px}
+  .cn-b{gap:12px 14px;margin-top:12px}
+  .cn-b label{font-size:.82rem}
+  .cn-b input,.cn-b select{height:48px;font-size:1rem}
+  .cn-b .in>span{top:3px}
+  .cn-m{margin-top:12px;padding-top:12px;font-size:.93rem}
+
+  .paper{padding:34px 34px 36px;margin:18px 0 20px}
+  .p-head b{font-size:1.35rem}
+  .p-head span{font-size:.92rem}
+  .p-g{font-size:.98rem;margin-top:24px}
+  .r{padding:11px 0;font-size:1.02rem}
+  .r .d{font-size:.86rem}
+  .net-row{margin-top:22px;padding-top:18px}
+  .net-row .a{font-size:2rem}
+  .acts{gap:12px}
+
+  .mhead,.mes{grid-template-columns:52px repeat(3,minmax(0,1fr));gap:10px}
+  .mes{padding:12px 10px 8px;margin:0 -10px}
+  .mes input{height:48px}
+  .mhead{font-size:.82rem}
+  .mes small{font-size:.84rem}
+
+  .cfg{max-width:900px;margin-top:0}
+  #syncBox{margin-top:44px}
+  .cfg summary{min-height:60px;font-size:1.05rem}
+  .row{grid-template-columns:1fr 96px 48px;gap:8px;margin:8px 0}
+  .row.f{grid-template-columns:1fr 104px 60px 48px}
+  .row input{height:48px}
+  .cfg select{height:46px;font-size:.95rem}
+  .syrow{padding:14px 16px}
+  .inst{max-width:900px;padding:14px 18px;font-size:.96rem}
+  .pie{font-size:.88rem;margin-top:40px}
+
+  .hist{max-width:900px}
+  .hctl{gap:8px;margin:16px 0}
+  .kpis{gap:14px;margin:16px 0}
+  .kpis>div{padding:16px 18px;border-radius:14px;gap:4px}
+  .kpis small{font-size:.8rem}
+  .kpis b{font-size:1.2rem}
+  .hdet{padding:18px 20px;border-radius:14px;font-size:.96rem}
+  .hdet .hd-v{font-size:1.8rem}
+  .hrow2{padding:14px 10px;font-size:1rem}
+  .hrow{padding:13px 0;font-size:.98rem}
+  .hmes{font-size:.84rem;margin-top:20px}
+  .hscroll{margin:10px -4px 0}
+}
+@media(min-width:1500px){
+  html{font-size:106%}
+  .top,.tabs-in,main{max-width:1320px}
+  .stage{grid-template-columns:minmax(0,540px) minmax(0,1fr);gap:80px}
+  .hist{max-width:1000px}
+}
 </style>
 </head>
 <body>
@@ -264,7 +430,7 @@ input:disabled{opacity:.45}
   <div class="sp-by">Personal Project by <b>Diosito</b><span class="sp-v" id="spV"></span></div>
 </div>
 <script>
-window.APP_VERSION = "2.1.0";
+window.APP_VERSION = "2.1.3";
 (function () {
   var s = document.getElementById("splash"); if (!s) return;
   var sv = document.getElementById("spV"); if (sv) sv.textContent = "Versión " + window.APP_VERSION;
@@ -308,18 +474,21 @@ window.APP_VERSION = "2.1.0";
       <div class="split"><i class="s-net" id="sNetS"></i><i class="s-desc" id="sDescS"></i></div>
       <p class="h-note" id="heroNoteS"></p>
     </section>
-    <section class="sheet" id="cobroCard" style="padding:14px">
-      <b>Cuándo cobrás</b> <span class="nota">(1ª quincena el 19, o el día hábil siguiente)</span>
-      <div id="cobroTxt" style="margin:6px 0 8px" aria-live="polite"></div>
-      <div class="cobroActs" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <select id="cobroN" aria-label="Día hábil de cobro" style="height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)"><option value="4">2ª quincena: 4º día hábil</option><option value="45">2ª quincena: 4º o 5º día hábil</option><option value="5">2ª quincena: 5º día hábil</option></select>
-        <button type="button" class="btn2" id="cobroNoti">Activar avisos en este celu</button>
+    <section class="sheet cobro" id="cobroCard">
+      <div class="cb-head"><h2>Cuándo cobrás</h2><span>1ª quincena el 19, o el día hábil siguiente</span></div>
+      <div id="cobroTxt" aria-live="polite"></div>
+      <div class="cb-set">
+        <label for="cobroN">La 2ª quincena se cobra</label>
+        <select id="cobroN" aria-label="Día hábil de cobro"><option value="4">2ª quincena: 4º día hábil</option><option value="45">2ª quincena: 4º o 5º día hábil</option><option value="5">2ª quincena: 5º día hábil</option></select>
+      </div>
+      <div class="cb-acts cobroActs">
+        <button type="button" class="btn2 pri" id="cobroNoti">Activar avisos en este celu</button>
         <button type="button" class="btn2" id="cobroIcs">Avisos en mi calendario (cierre y cobro)</button>
       </div>
-      <p class="nota" id="cobroNotiTxt" style="margin:8px 0 0"></p>
-      <details style="margin-top:8px"><summary class="nota" style="cursor:pointer">Feriados que se descuentan</summary>
-        <p class="nota" style="margin:6px 0">Sábados, domingos y feriados no cuentan. Ya cargué los feriados nacionales de 2026 y 2027. Si falta alguno (un puente o un feriado de tu provincia), agregalo acá así: AAAA-MM-DD, separados por coma.</p>
-        <input id="cobroFer" placeholder="2027-03-22, 2027-07-12" style="width:100%;height:40px;padding:0 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);color:var(--ink);font:400 1rem var(--sans)">
+      <p class="cb-note" id="cobroNotiTxt"></p>
+      <details class="cb-fer"><summary>Feriados que se descuentan</summary>
+        <p>Sábados, domingos y feriados no cuentan. Ya cargué los feriados nacionales de 2026 y 2027. Si falta alguno (un puente o un feriado de tu provincia), agregalo acá así: AAAA-MM-DD, separados por coma.</p>
+        <input id="cobroFer" placeholder="2027-03-22, 2027-07-12">
       </details>
     </section>
     <section class="sheet">
@@ -2923,7 +3092,7 @@ function pintarHist() {
   $("hKpi").innerHTML = `<div class="kpis"><div><small>Promedio</small><b>${peso0(prom)}</b></div><div><small>Mejor</small><b>${peso0(mejor.v)}</b><small>${esc(mejor.txt)}</small></div>` +
     (cambio == null ? "" : `<div><small>Desde ${esc(V[0].corto)} ${esc(V[0].mes.slice(0, 3))} ${esc(V[0].anio)}</small><b class="${cambio >= 0 ? "up" : "dn"}">${cambio >= 0 ? "+" : MENOS}${fmt.format(Math.abs(cambio))}%</b></div>`) + "</div>";
   // gráfico: se desplaza hacia el costado si hay muchos cobros; tocá un punto para ver el detalle
-  const W = Math.max(350, n * 30), H = 250, top = 34, bot = 50, L = 46, R = 18, ph = H - top - bot;
+  const W = Math.max(350, n * 30, Math.min(1000, ($("hChart") && $("hChart").clientWidth) || 0)), H = 250, top = 34, bot = 50, L = 46, R = 18, ph = H - top - bot;
   const lo = Math.min(...V.map(p => p.v), prom), hi = Math.max(...V.map(p => p.v)), pad = (hi - lo) * .18 || hi * .1, ymin = Math.max(0, lo - pad), ymax = hi + pad;
   const X = i => n === 1 ? (W + L - R) / 2 : L + i * (W - L - R) / (n - 1), Y = v => top + (ymax - v) / (ymax - ymin) * ph;
   const color = p => p.prev == null ? "var(--mut)" : p.v >= p.prev ? "var(--net)" : "var(--desc)";
@@ -3028,9 +3197,16 @@ function pintarCobro() {
   const dd = Math.round((p.desde - hoy) / 864e5), dh = Math.round((p.hasta - hoy) / 864e5);
   const rango = p.desde.getTime() === p.hasta.getTime() ? "el " + fechaLarga(p.desde) : "entre el " + fechaLarga(p.desde) + " y el " + fechaLarga(p.hasta);
   const cuando = dd > 1 ? `Faltan ${dd} días.` : dd === 1 ? "Es mañana." : dh === 0 && dd === 0 ? "¡Es hoy!" : dd === 0 ? "Hoy puede ser el día." : "Puede ser hoy o mañana.";
-  const ci = proximosCierres(1)[0], dc = ci ? diasHasta(ci.fecha) : 99, cierreTxt = ci ? `<div class="${dc <= 2 ? "aviso" : "nota"}" style="margin:8px 0 0">${dc === 0 ? "<b>Hoy cierra</b>" : dc === 1 ? "<b>Mañana cierra</b>" : "Cierra"} la ${cobroTitulo(ci)}${dc > 1 ? ": " + fechaLarga(ci.fecha) + " (faltan " + dc + " días)" : dc === 1 ? " (" + fechaLarga(ci.fecha) + ")" : ""}. Revisá que tus horas y novedades estén cargadas.</div>` : "";
-  box.innerHTML = `Cobrás la <b>${cobroTitulo(p)}</b> ${rango}.<br><span class="${dd <= 1 ? "" : "nota"}">${cuando}</span>${cierreTxt}` +
-    (L.length > 1 ? `<div style="margin-top:6px">` + L.slice(1).map(x => `<div class="nota" style="margin:2px 0">${cobroTitulo(x)}: ${x.desde.getTime() === x.hasta.getTime() ? fechaLarga(x.desde) : fechaLarga(x.desde) + " o " + fechaLarga(x.hasta)}</div>`).join("") + "</div>" : "");
+  const ci = proximosCierres(1)[0], dc = ci ? diasHasta(ci.fecha) : 99, cap = x => x.charAt(0).toUpperCase() + x.slice(1);
+  const unico = p.desde.getTime() === p.hasta.getTime(), t = {w: DIAS[p.desde.getDay()], n: p.desde.getDate(), m: MESES[p.desde.getMonth()].slice(0, 3).toLowerCase()}, ya = dd <= 1;
+  const cierre = ci ? `<div class="cb-cierre${dc <= 2 ? " cerca" : ""}"><b>${dc === 0 ? "Hoy cierra" : dc === 1 ? "Mañana cierra" : "Cierra"} la ${cobroTitulo(ci)}</b>` +
+    (dc >= 1 ? `<span>${cap(fechaLarga(ci.fecha))}${dc > 1 ? ", faltan " + dc + " días" : ""}</span>` : "") +
+    `<span>Revisá que tus horas y novedades estén cargadas.</span></div>` : "";
+  const sig = L.slice(1).map(x => `<div class="cb-r"><span>${cobroTitulo(x)}</span><b>${x.desde.getTime() === x.hasta.getTime() ? fechaLarga(x.desde) : fechaLarga(x.desde) + " o " + fechaLarga(x.hasta)}</b></div>`).join("");
+  box.innerHTML = `<div class="cb-next"><div class="cb-tile${ya ? " hoy" : ""}" aria-hidden="true"><span class="w">${t.w}</span><b>${t.n}</b><span class="m">${t.m}</span></div>` +
+    `<div class="cb-info"><p class="cb-f${unico ? "" : " rng"}">${unico ? cap(fechaLarga(p.desde)) : "Entre el " + fechaLarga(p.desde) + " y el " + fechaLarga(p.hasta)}</p>` +
+    `<p class="cb-q">Cobrás la <b>${cobroTitulo(p)}</b></p><span class="cb-chip${ya ? " hoy" : ""}">${cuando}</span></div></div>` + cierre +
+    (sig ? `<div class="cb-sig"><p>Después</p>${sig}</div>` : "");
 }
 $("cobroN").onchange = () => { S.cfg.cobro = $("cobroN").value; guardar("cfg"); pintarCobro(); };
 $("cobroFer").onchange = () => { S.cfg.fer = $("cobroFer").value.trim(); guardar("cfg"); pintarCobro(); };
@@ -3065,20 +3241,39 @@ async function mandarAvisos() {
     if (reg.periodicSync) { try { await reg.periodicSync.register("avisos", {minInterval: 12 * 3600 * 1000}); } catch (e) {} }
   } catch (e) {}
 }
-function pintarNoti() {
+const esIOS = /iphone|ipad|ipod/i.test(navigator.userAgent), esAnd = /android/i.test(navigator.userAgent);
+function pintarNoti(msg) {
   const b = $("cobroNoti"), t = $("cobroNotiTxt"); if (!b) return;
-  if (!hayNoti()) { b.hidden = true; t.textContent = "Para recibir avisos en el celu abrí la calculadora desde su dirección web (no desde un archivo) e instalala en la pantalla de inicio."; return; }
+  if (!hayNoti()) {
+    b.hidden = true;
+    t.textContent = !/^https?:$/.test(location.protocol) ? "Para recibir avisos abrí la calculadora desde su dirección web (no desde un archivo) e instalala en la pantalla de inicio."
+      : esIOS ? "En iPhone los avisos solo funcionan con la app instalada. Tocá Compartir, elegí \"Agregar a pantalla de inicio\", abrila desde ese ícono y activá los avisos acá."
+      : "Este navegador no permite avisos. Probá con Chrome o usá el calendario.";
+    return;
+  }
   const p = Notification.permission;
-  b.textContent = p === "granted" ? "Probar un aviso" : "Activar avisos en este celu";
-  t.textContent = p === "granted" ? "Avisos activados. Te aviso el día antes y el mismo día del cierre y del cobro. Android los manda cuando despierta la app (más o menos una vez al día), así que la hora no es exacta. Si querés una alarma a hora fija, usá el calendario."
-    : p === "denied" ? "Bloqueaste los avisos de este sitio. Se activan desde los ajustes del navegador, en permisos del sitio." : "Los avisos llegan como cualquier notificación del celu." + (/android/i.test(navigator.userAgent) && !(window.matchMedia && matchMedia("(display-mode: standalone)").matches) ? " En Android funcionan mejor con la app instalada (menú ⋮ → Instalar aplicación)." : "");
   b.hidden = p === "denied";
+  b.textContent = p === "granted" ? "Probar un aviso" : "Activar avisos en este celu";
+  const base = p === "granted" ? "Avisos activados. Te aviso el día antes y el mismo día del cierre y del cobro. Android los manda cuando despierta la app (más o menos una vez al día), así que la hora no es exacta. Si querés una alarma a hora fija, usá el calendario."
+    : p === "denied" ? (esIOS ? "Bloqueaste los avisos. Activalos en Ajustes del iPhone, en Notificaciones, buscando Mi Recibo."
+      : "Bloqueaste los avisos de este sitio. Para activarlos tocá el candado (o el ⋮) al lado de la dirección web, entrá a Permisos o Configuración del sitio y poné Notificaciones en Permitir. Después volvé acá.")
+    : "Tocá el botón y, cuando el celu pregunte, elegí Permitir. Los avisos llegan como cualquier notificación." + (esAnd && !esApp() ? " En Android funcionan mejor con la app instalada (menú ⋮ → Instalar aplicación)." : "");
+  t.textContent = (msg ? msg + " " : "") + base;
 }
 $("cobroNoti").onclick = async () => {
   if (!hayNoti()) return;
-  if (Notification.permission !== "granted") { try { await Notification.requestPermission(); } catch (e) {} }
-  pintarNoti();
-  if (Notification.permission === "granted") { await mandarAvisos(); try { const reg = await navigator.serviceWorker.ready; (reg.active || navigator.serviceWorker.controller).postMessage({tipo: "prueba"}); } catch (e) {} }
+  const antes = Notification.permission; let msg = "";
+  if (antes !== "granted") { try { await Notification.requestPermission(); } catch (e) {} }
+  const p = Notification.permission;
+  if (p === "granted") {
+    await mandarAvisos();
+    try {
+      const reg = await navigator.serviceWorker.ready, sw = reg.active || navigator.serviceWorker.controller; if (!sw) throw 0;
+      sw.postMessage({tipo: "prueba"});
+      msg = antes === "granted" ? "Te mandé un aviso de prueba. Si no lo ves, revisá que las notificaciones de la app estén permitidas en los ajustes del celu." : "¡Listo! Avisos activados. Te mandé uno de prueba.";
+    } catch (e) { msg = "Quedaron activados, pero no pude mandar la prueba ahora. Recargá la página y probá de nuevo."; }
+  } else if (p === "default") msg = "No elegiste una opción, así que siguen apagados. Tocá el botón de nuevo y elegí Permitir.";
+  pintarNoti(msg);
 };
 pintarNoti(); mandarAvisos();
 pintarCobro(); document.addEventListener("visibilitychange", () => { if (!document.hidden) { pintarCobro(); mandarAvisos(); } });
