@@ -462,7 +462,7 @@ window.mrCopia = function (motivo, version) {
 };
 try {   // si la app cambió de versión (por ejemplo se actualizó sola), se guarda una copia de los datos de antes
   var vPrev = localStorage.getItem("mr_ult_version");
-  if (vPrev !== window.APP_VERSION) { window.mrCopia("al pasar a la versión " + window.APP_VERSION, vPrev || "anterior"); localStorage.setItem("mr_ult_version", window.APP_VERSION); if (vPrev) localStorage.setItem("mr_nov_pend", window.APP_VERSION); }
+  if (vPrev !== window.APP_VERSION) { window.mrCopia("al pasar a la versión " + window.APP_VERSION, vPrev || "anterior"); localStorage.setItem("mr_ult_version", window.APP_VERSION); localStorage.setItem("mr_nov_pend", vPrev ? window.APP_VERSION : "primera"); }
 } catch (e) {}
 /* Red de seguridad: si algo falla al arrancar, en vez de dejar la pantalla en blanco se muestra qué pasó y cómo salir. */
 (function () {
@@ -833,7 +833,7 @@ try {   // si la app cambió de versión (por ejemplo se actualizó sola), se gu
   <label class="check"><input type="checkbox" id="redondeo"> Redondear el neto al peso</label>
   <button type="button" class="btn2" id="resetCfg" style="margin-top:18px">Volver a los valores originales</button>
 </details>
-<p class="pie">El recibo oficial de tu empleador es el que vale.<br><span id="pieV" style="opacity:.7"></span><br><button type="button" id="btnBuscarUpd" class="btn2" style="margin-top:8px">Buscar actualización</button><br><span id="ultUpd" style="font-size:.8rem;opacity:.8"></span><br><span id="msgUpd" style="font-size:.8rem"></span><div id="mrBk" hidden></div></p>
+<p class="pie">El recibo oficial de tu empleador es el que vale.<br><span id="pieV" style="opacity:.7"></span><br><button type="button" id="btnBuscarUpd" class="btn2" style="margin-top:8px">Buscar actualización</button> <button type="button" id="btnNov" class="btn2" style="margin-top:8px">Ver novedades</button><br><span id="ultUpd" style="font-size:.8rem;opacity:.8"></span><br><span id="msgUpd" style="font-size:.8rem"></span><div id="mrBk" hidden></div></p>
 </main>
 
 <div class="bar" id="bar" hidden><div><span id="barTxt">Neto a cobrar</span><b id="barVal">$ 0,00</b></div></div>
@@ -1335,6 +1335,11 @@ function asegurarPerfiles() {
   let a = perfilActual();
   if (!a && P.perfiles.length) { a = P.perfiles[0]; P.actual = a.id; }
   if (a) P.items = a.items;
+  try {
+    let tocado = false;
+    P.perfiles.forEach(pf => { if (/repicky/i.test(pf.nombre || "") && !pf.def && Array.isArray(pf.items) && ajustarRepicky(pf.items)) tocado = true; });
+    if (tocado) { if (a) P.items = a.items; guardar("plan"); }
+  } catch (e) {}
 }
 // para el aguinaldo y los otros modos: los descuentos del perfil quedan también en la configuración
 function sincCfgDeItems() {
@@ -1395,6 +1400,18 @@ function itemsEjemplo() {
 }
 // Perfil Repicky (convenio UOM): los conceptos y descuentos del recibo. Sin datos personales: cada uno carga su valor de hora, horas, antigüedad y adicional.
 // No lleva sumas no remunerativas: no se repiten de una quincena a otra; se agregan con "Agregar un importe de este mes".
+// Sumas no remunerativas de octubre 2026 que el recibo de Repicky trae solo en la 2da quincena (no entran en ningún descuento)
+function repickyPuntuales(items) {
+  const hay = re => items.some(x => x.t === "norem" && (re.test(sinAc(x.n || "")) || re.test(String(x.c || ""))));
+  if (!hay(/comp\w*\.?\s*extr|^1026$/)) items.push(itemNuevo({n: "CompExtr NoRem Abr-Jul/26", c: "1026", t: "norem", f: "fijo", m: 70000, q: 2, vd: "2026-10", vh: "2026-10"}));
+  if (!hay(/grat\w*\.?\s*extr|^1027$/)) items.push(itemNuevo({n: "Grat Extr NO REM Oct/26", c: "1027", t: "norem", f: "fijo", m: 30000, q: 2, vd: "2026-10", vh: "2026-10"}));
+}
+// Perfiles Repicky ya armados: el adicional de título pasa a la 2da quincena y se suman las dos sumas no remunerativas, si todavía no están
+function ajustarRepicky(items) {
+  let c = 0;
+  items.forEach(x => { if (x.t === "rem" && x.f === "fijo" && !x.q && (x.c === "721" || /adic\w*\.?\s*(de\s+)?titulo/.test(sinAc(x.n || "")))) { x.q = 2; c++; } });
+  const antes = items.length; repickyPuntuales(items); return c + (items.length - antes);
+}
 function itemsRepicky() {
   const N = itemNuevo({n: "Horas normales", c: "1", f: "cant", cant: 0, u: 0}), s = [N];
   const add = o => { const x = itemNuevo(o); s.push(x); return x; };
@@ -1405,8 +1422,9 @@ function itemsRepicky() {
   add({n: "Hs Adic Noc", f: "cant", cant: 0, ref: N.id, mult: 1});      // 1 hora por noche, al valor de la hora
   add({n: "Presentismo", c: "615", f: "pct", p: 10, base: {k: "set", ids: [N.id, F.id]}});
   add({n: "Premio (Pr CamCul)", c: "616", f: "pct", p: 14, base: {k: "set", ids: [N.id, F.id]}});
-  const A = add({n: "Adicional de título", c: "721", f: "fijo", m: 0});
+  const A = add({n: "Adicional de título", c: "721", f: "fijo", m: 0, q: 2});   // en el recibo solo sale en la 2da quincena
   const AN = add({n: "Antigüedad", c: "730", f: "pct", p: 0, base: {k: "set", ids: [N.id, F.id]}});
+  repickyPuntuales(s);
   add({n: "Jubilación Reparto", c: "3001", t: "desc", f: "pct", p: 11, base: {k: "rem", ids: []}});
   add({n: "O. Social UOM", c: "3004", t: "desc", f: "pct", p: 2.55, base: {k: "rem", ids: []}});
   add({n: "Fondo Solidario", c: "3030", t: "desc", f: "pct", p: 0.45, base: {k: "rem", ids: []}});
@@ -3281,6 +3299,13 @@ const FERIADOS = ["2026-01-01","2026-02-16","2026-02-17","2026-03-23","2026-03-2
 const ymd = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 const ferAutoDias = () => S.cfg.ferAuto && Array.isArray(S.cfg.ferAuto.dias) ? S.cfg.ferAuto.dias : [];
 const feriadosSet = () => new Set(FERIADOS.concat(ferAutoDias(), String(S.cfg.fer || "").split(/[,;\s]+/).filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x))));
+// los próximos feriados (de hoy en adelante), con los que trae la app, los de internet y los que cargaste a mano
+function proximosFeriados(cuantos) {
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  return [...feriadosSet()].map(x => { const [a, m, d] = x.split("-").map(Number); return new Date(a, m - 1, d); })
+    .filter(d => !isNaN(d) && d >= hoy).sort((a, b) => a - b).slice(0, cuantos)
+    .map(d => ({fecha: d, dias: Math.round((d - hoy) / 864e5)}));
+}
 function diaHabil(anio, mes, n, fer) {          // mes 0-11
   let c = 0;
   for (let d = 1; d <= 31; d++) { const f = new Date(anio, mes, d); if (f.getMonth() !== mes) break; const w = f.getDay(); if (w === 0 || w === 6 || fer.has(ymd(f))) continue; if (++c === n) return f; }
@@ -3322,6 +3347,8 @@ function pintarCobro() {
   const rango = p.desde.getTime() === p.hasta.getTime() ? "el " + fechaLarga(p.desde) : "entre el " + fechaLarga(p.desde) + " y el " + fechaLarga(p.hasta);
   const cuando = dd > 1 ? `Faltan ${dd} días.` : dd === 1 ? "Es mañana." : dh === 0 && dd === 0 ? "¡Es hoy!" : dd === 0 ? "Hoy puede ser el día." : "Puede ser hoy o mañana.";
   const ci = proximosCierres(1)[0], dc = ci ? diasHasta(ci.fecha) : 99, cap = x => x.charAt(0).toUpperCase() + x.slice(1);
+  const fer = proximosFeriados(4);
+  const aprov = fer.find(f => f.fecha.getDay() !== 0 && f.fecha.getDay() !== 6);   // el próximo feriado de lunes a viernes
   const unico = p.desde.getTime() === p.hasta.getTime(), t = {w: DIAS[p.desde.getDay()], n: p.desde.getDate(), m: MESES[p.desde.getMonth()].slice(0, 3).toLowerCase()}, ya = dd <= 1;
   const cierre = ci ? `<div class="cb-cierre${dc <= 2 ? " cerca" : ""}"><b>${dc === 0 ? "Hoy cierra" : dc === 1 ? "Mañana cierra" : "Cierra"} la ${cobroTitulo(ci)}</b>` +
     (dc >= 1 ? `<span>${cap(fechaLarga(ci.fecha))}${dc > 1 ? ", faltan " + dc + " días" : ""}</span>` : "") +
@@ -3330,7 +3357,8 @@ function pintarCobro() {
   box.innerHTML = `<div class="cb-next"><div class="cb-tile${ya ? " hoy" : ""}" aria-hidden="true"><span class="w">${t.w}</span><b>${t.n}</b><span class="m">${t.m}</span></div>` +
     `<div class="cb-info"><p class="cb-f${unico ? "" : " rng"}">${unico ? cap(fechaLarga(p.desde)) : "Entre el " + fechaLarga(p.desde) + " y el " + fechaLarga(p.hasta)}</p>` +
     `<p class="cb-q">Cobrás la <b>${cobroTitulo(p)}</b></p><span class="cb-chip${ya ? " hoy" : ""}">${cuando}</span></div></div>` + cierre +
-    (sig ? `<div class="cb-sig"><p>Después</p>${sig}</div>` : "");
+    (sig ? `<div class="cb-sig"><p>Después</p>${sig}</div>` : "") +
+    (fer.length ? `<div class="cb-sig"><p>Próximos feriados</p>${fer.map(f => `<div class="cb-r"><span>${cap(fechaLarga(f.fecha))}${f.fecha.getDay() === 0 || f.fecha.getDay() === 6 ? " (fin de semana)" : ""}</span><b>${f.dias === 0 ? "Hoy" : f.dias === 1 ? "Mañana" : "Faltan " + f.dias + " días"}</b></div>`).join("")}${aprov ? `<p class="cb-note">Aprovechá el ${fechaLarga(aprov.fecha)}: si trabajás ese día, se cobra al 100%.</p>` : ""}</div>` : "");
 }
 $("cobroN").onchange = () => { S.cfg.cobro = $("cobroN").value; guardar("cfg"); pintarCobro(); };
 $("cobroFer").onchange = () => { S.cfg.fer = $("cobroFer").value.trim(); guardar("cfg"); pintarCobro(); };
@@ -3400,6 +3428,7 @@ function eventosAviso() {
   const L = [];
   proximosCobros(8).forEach(p => L.push({f: ymd(p.desde), t: "cobrás la " + cobroTitulo(p), c: "Ya podés estar cobrando: " + (p.desde.getTime() === p.hasta.getTime() ? "se paga el " + fechaLarga(p.desde) : "entre el " + fechaLarga(p.desde) + " y el " + fechaLarga(p.hasta)) + "."}));
   proximosCierres(8).forEach(c => L.push({f: ymd(c.fecha), t: "cierra la " + cobroTitulo(c), c: "Revisá que tus horas y novedades estén cargadas."}));
+  proximosFeriados(10).filter(f => f.fecha.getDay() !== 0 && f.fecha.getDay() !== 6).forEach(f => L.push({f: ymd(f.fecha), t: "es feriado", av: [7, 3, 1], c: fechaLarga(f.fecha).replace(/^./, x => x.toUpperCase()) + ". Aprovechá ese día: si trabajás, se cobra al 100%."}));
   return L;
 }
 async function mandarAvisos() {
@@ -3422,7 +3451,7 @@ function pintarNoti(msg) {
   const p = Notification.permission;
   b.hidden = p === "denied";
   b.textContent = p === "granted" ? "Probar un aviso" : "Activar avisos en este celu";
-  const base = p === "granted" ? "Avisos activados. Te aviso el día antes y el mismo día del cierre y del cobro. Android los manda cuando despierta la app (más o menos una vez al día), así que la hora no es exacta. Si querés una alarma a hora fija, usá el calendario."
+  const base = p === "granted" ? "Avisos activados. Te aviso el día antes y el mismo día del cierre y del cobro, y 7, 3 y 1 día antes de cada feriado. Android los manda cuando despierta la app (más o menos una vez al día), así que la hora no es exacta. Si querés una alarma a hora fija, usá el calendario."
     : p === "denied" ? (esIOS ? "Bloqueaste los avisos. Activalos en Ajustes del iPhone, en Notificaciones, buscando Mi Recibo."
       : "Bloqueaste los avisos de este sitio. Para activarlos tocá el candado (o el ⋮) al lado de la dirección web, entrá a Permisos o Configuración del sitio y poné Notificaciones en Permitir. Después volvé acá.")
     : "Tocá el botón y, cuando el celu pregunte, elegí Permitir. Los avisos llegan como cualquier notificación." + (esAnd && !esApp() ? " En Android funcionan mejor con la app instalada (menú ⋮ → Instalar aplicación)." : "");
@@ -3556,7 +3585,7 @@ if (/android/i.test(navigator.userAgent) && !esApp() && !instOculto()) {   // Br
     } else { recargando = true; location.reload(); }
   };
   const mostrarUpd = info => {
-    const nv = document.getElementById("avisoNov"); if (nv) nv.remove();
+    ["avisoNov", "modalNov"].forEach(i => { const nv = document.getElementById(i); if (nv) nv.remove(); });
     const nueva = info && info.v && info.v !== window.APP_VERSION;
     barra("avisoUpd", nueva ? "Hay una versión nueva: " + info.v : "Hay una versión nueva de Mi Recibo", nueva && info.n ? info.n : "",
       [["Actualizar", async x => { x.disabled = true; x.textContent = "Actualizando…"; await aplicar(); }, true]]);
@@ -3602,19 +3631,48 @@ if (/android/i.test(navigator.userAgent) && !esApp() && !instOculto()) {   // Br
     mm.textContent = r.hay ? "" : r.ok ? "Ya tenés la última versión (" + window.APP_VERSION + ")." : "No pude conectar. ¿Tenés internet?";
   };
 
-  // ----- novedades: se muestran una sola vez, después de actualizar -----
+  // ----- novedades: la lista completa de versiones; sale una sola vez después de actualizar o la primera vez que abrís la app -----
+  const novedades = pend => {
+    if (document.getElementById("modalNov")) return;
+    const H = Array.isArray(window.APP_HISTORIAL) && window.APP_HISTORIAL.length ? window.APP_HISTORIAL : [[window.APP_VERSION, String(window.APP_NOVEDADES || "").trim()]];
+    const ov = document.createElement("div"); ov.id = "modalNov"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true"); ov.setAttribute("aria-labelledby", "modalNovT");
+    ov.style.cssText = "position:fixed;inset:0;z-index:100000;background:rgba(20,32,44,.55);display:flex;align-items:center;justify-content:center;padding:14px";
+    const pn = document.createElement("div");
+    pn.style.cssText = "background:var(--sheet);color:var(--ink);border-radius:16px;max-width:480px;width:100%;max-height:calc(100vh - 28px);display:flex;flex-direction:column;overflow:hidden;font-family:var(--sans)";
+    const cab = document.createElement("div"); cab.style.cssText = "padding:16px 18px 10px";
+    const t = document.createElement("div"); t.id = "modalNovT"; t.style.cssText = "font:700 18px var(--sans)";
+    t.textContent = pend === "primera" ? "Bienvenido a Mi Recibo" : "Novedades de Mi Recibo";
+    const st = document.createElement("div"); st.style.cssText = "font-size:13px;color:var(--mut);margin-top:2px";
+    st.textContent = pend === "primera" ? "Esto es lo que fue sumando la app hasta hoy. Estás en la versión " + window.APP_VERSION + "." : "Ya estás en la versión " + window.APP_VERSION + ". Arriba está lo último.";
+    cab.appendChild(t); cab.appendChild(st);
+    const ls = document.createElement("div"); ls.style.cssText = "overflow:auto;padding:4px 18px 8px;flex:1 1 auto";
+    H.forEach(([v, n], i) => {
+      const f = document.createElement("div"); f.style.cssText = "padding:10px 0;border-top:1px solid var(--line)";
+      const h = document.createElement("div"); h.style.cssText = "font:700 14px var(--sans);display:flex;gap:8px;align-items:center";
+      const vv = document.createElement("span"); vv.textContent = "Versión " + v; h.appendChild(vv);
+      if (String(v) === String(window.APP_VERSION)) { const g = document.createElement("span"); g.textContent = "la tuya"; g.style.cssText = "background:var(--net-bg);color:var(--net);border-radius:8px;padding:1px 8px;font:700 11px var(--sans)"; h.appendChild(g); }
+      const d = document.createElement("div"); d.style.cssText = "font-size:13.5px;line-height:1.45;margin-top:3px"; d.textContent = n;
+      f.appendChild(h); f.appendChild(d); ls.appendChild(f);
+    });
+    const pie = document.createElement("div"); pie.style.cssText = "padding:10px 18px 16px;display:flex;justify-content:flex-end";
+    const bt = document.createElement("button"); bt.type = "button"; bt.textContent = "Entendido";
+    bt.style.cssText = "border:0;border-radius:10px;padding:10px 18px;font:700 14px var(--sans);cursor:pointer;background:var(--navy);color:var(--on-navy)";
+    const cerrar = () => { try { localStorage.removeItem("mr_nov_pend"); } catch (e) {} document.removeEventListener("keydown", tecla); ov.remove(); };
+    const tecla = e => { if (e.key === "Escape") cerrar(); };
+    bt.onclick = cerrar; document.addEventListener("keydown", tecla);
+    ov.addEventListener("click", e => { if (e.target === ov) cerrar(); });
+    pie.appendChild(bt); pn.appendChild(cab); pn.appendChild(ls); pn.appendChild(pie); ov.appendChild(pn); document.body.appendChild(ov); bt.focus();
+  };
+  const bnov = $("btnNov"); if (bnov) bnov.onclick = () => novedades("manual");
   setTimeout(() => { try {
     const pend = localStorage.getItem("mr_nov_pend"); if (!pend) return;
-    const notas = String(window.APP_NOVEDADES || "").trim();
-    if (!notas) { localStorage.removeItem("mr_nov_pend"); return; }
     if (document.getElementById("avisoUpd")) return;                                   // queda pendiente para la próxima vez
-    barra("avisoNov", "Novedades de la versión " + window.APP_VERSION, notas,
-      [["Entendido", (x, b) => { try { localStorage.removeItem("mr_nov_pend"); } catch (e) {} b.remove(); }, true]]);
+    novedades(pend);
   } catch (e) {} }, 2500);
 
   // ----- recordatorio suave: hace más de un mes que no guardás una copia en archivo -----
   setTimeout(() => { try {
-    if (document.getElementById("avisoUpd") || document.getElementById("avisoNov") || !Object.keys(S.hist || {}).length) return;
+    if (document.getElementById("avisoUpd") || document.getElementById("modalNov") || !Object.keys(S.hist || {}).length) return;
     const dias = (SY.ult ? Date.now() - SY.ult : Infinity) / 864e5;
     if (dias <= 30 || Date.now() - (+localStorage.getItem(K_REC) || 0) < 3 * 864e5) return;
     localStorage.setItem(K_REC, String(Date.now()));

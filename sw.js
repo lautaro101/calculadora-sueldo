@@ -40,6 +40,12 @@ const ymdL = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "
 function avisosPendientes(eventos, ahora, avisados) {
   const hoy = ymdL(ahora), man = ymdL(new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + 1)), ya = new Set(avisados), out = [];
   (eventos || []).forEach(e => {
+    if (Array.isArray(e.av) && e.av.length) {         // avisos con anticipación (feriados): por ejemplo 7, 3 y 1 día antes; si un día no se abrió la app, se avisa al abrirla
+      const [a, m, d] = String(e.f).split("-").map(Number), dias = Math.round((new Date(a, m - 1, d) - new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate())) / 864e5);
+      const n = e.av.filter(x => dias >= 1 && dias <= x).sort((x, y) => x - y)[0]; if (!n) return;
+      const key = e.f + "|" + e.t + "|antes" + n; if (ya.has(key)) return;
+      out.push({key, titulo: (dias === 1 ? "Mañana: " : "En " + dias + " días: ") + e.t, cuerpo: e.c || ""}); return;
+    }
     const cuando = e.f === hoy ? "hoy" : e.f === man ? "man" : "";
     if (!cuando) return;
     const key = e.f + "|" + e.t + "|" + cuando; if (ya.has(key)) return;
@@ -59,7 +65,7 @@ self.addEventListener("periodicsync", e => { if (e.tag === "avisos") e.waitUntil
 self.addEventListener("message", e => {
   if (e.data && e.data.tipo === "actualizar") { self.skipWaiting(); return; }   // botón «Actualizar» de la app
   if (e.data && e.data.tipo === "avisos") e.waitUntil(guardarAv("avisos.json", e.data.eventos || []).then(revisarAvisos));
-  if (e.data && e.data.tipo === "prueba" && self.Notification && Notification.permission === "granted") e.waitUntil(self.registration.showNotification("Así te va a avisar", {body: "Cuando cierre la quincena o se acerque tu cobro, vas a ver un mensaje como este.", icon: "icon-192.png", tag: "prueba"}));
+  if (e.data && e.data.tipo === "prueba" && self.Notification && Notification.permission === "granted") e.waitUntil(self.registration.showNotification("Así te va a avisar", {body: "Cuando cierre la quincena, se acerque tu cobro o haya un feriado, vas a ver un mensaje como este.", icon: "icon-192.png", tag: "prueba"}));
 });
 self.addEventListener("notificationclick", e => {
   e.notification.close();
