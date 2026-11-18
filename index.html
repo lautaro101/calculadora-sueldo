@@ -445,6 +445,9 @@ input:disabled{opacity:.45}
   <div class="sp-bar"><i></i></div>
   <div class="sp-by">Personal Project by <b>Diosito</b><span class="sp-v" id="spV"></span></div>
 </div>
+<script>/* si version.js no llega (señal mala), la pantalla del logo avisa en vez de quedarse esperando */
+setTimeout(function () { if (window.APP_VERSION) return; var s = document.getElementById("splash"), t = s && s.querySelector(".sp-t"); if (!t) return; t.textContent = "Está tardando más de lo normal. Tocá la pantalla para reintentar."; t.style.opacity = "1"; s.onclick = function () { location.reload(); }; }, 7000);
+</script>
 <script src="version.js"></script>
 <script>
 window.APP_VERSION = window.APP_VERSION || "sin versión";   // la versión real viene de version.js
@@ -505,10 +508,19 @@ try {   // si la app cambió de versión (por ejemplo se actualizó sola), se gu
     if (sessionStorage.getItem("mr_splash")) return quitar();                        // una vez por apertura de la app
     sessionStorage.setItem("mr_splash", "1");
   } catch (e) {}
-  window.addEventListener("load", function () { setTimeout(cerrar, Math.max(0, 2400 - (Date.now() - t0))); });
+  // se cierra apenas la página está armada (sin esperar al evento «load», que en el celu puede demorar por cosas que no son de la app)
+  var listo = function () { setTimeout(cerrar, Math.max(0, 2400 - (Date.now() - t0))); };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", listo); else listo();
   s.addEventListener("click", cerrar);
-  setTimeout(cerrar, 5000);
+  setTimeout(cerrar, 3500);
 })();
+/* cuánto tardó la última apertura, para ver dónde se demora (se muestra abajo de todo, junto a la versión) */
+window.addEventListener("load", function () { setTimeout(function () { try {
+  var n = performance.getEntriesByType("navigation")[0], e = document.getElementById("pieV"); if (!n || !e || e.querySelector("small")) return;
+  var f = function (x) { return (x / 1000).toFixed(1).replace(".", ",") + " s"; };
+  var m = document.createElement("small"); m.style.cssText = "display:block;margin-top:4px"; m.textContent = "Última apertura: respuesta en " + f(n.responseStart) + " · lista en " + f(n.domContentLoadedEventEnd) + " · cargada del todo en " + f(n.loadEventEnd);
+  e.appendChild(m);
+} catch (x) {} }, 400); });
 </script>
 
 <header class="top">
@@ -3306,6 +3318,22 @@ function proximosFeriados(cuantos) {
     .filter(d => !isNaN(d) && d >= hoy).sort((a, b) => a - b).slice(0, cuantos)
     .map(d => ({fecha: d, dias: Math.round((d - hoy) / 864e5)}));
 }
+// cuánto sumás de neto si trabajás un feriado: esas horas van al 100% sobre el valor de la hora, y los descuentos los saca el mismo motor del recibo.
+// Devuelve null si el perfil no tiene un concepto de horas al 100% o todavía no tiene el valor de la hora cargado.
+function ganaFeriado(fecha) {
+  try {
+    const pa = perfilActual(), items = pa && Array.isArray(pa.items) ? pa.items : (S.plan && S.plan.items) || [];
+    const h100 = items.find(x => x.t === "rem" && x.f === "cant" && /100\s*%/.test(x.n || ""));
+    if (!h100) return null;
+    const fer = items.find(x => x.fer), hs = num(fer && fer.fer) || 9;
+    const quin = fecha.getDate() <= 15 ? 1 : 2, per = fecha.getFullYear() + "-" + String(fecha.getMonth() + 1).padStart(2, "0");
+    const red = !!(pa ? pa.redondeo : S.cfg && S.cfg.redondeo);
+    const a = calcItems(items, quin, red, undefined, per).neto;
+    const it2 = clonar(items); it2.find(x => x.id === h100.id).cant = num(h100.cant) + hs;
+    const dif = calcItems(it2, quin, red, undefined, per).neto - a;
+    return dif > 0 ? {hs, neto: Math.round(dif / 100) * 100 || Math.round(dif)} : null;
+  } catch (e) { return null; }
+}
 function diaHabil(anio, mes, n, fer) {          // mes 0-11
   let c = 0;
   for (let d = 1; d <= 31; d++) { const f = new Date(anio, mes, d); if (f.getMonth() !== mes) break; const w = f.getDay(); if (w === 0 || w === 6 || fer.has(ymd(f))) continue; if (++c === n) return f; }
@@ -3428,7 +3456,7 @@ function eventosAviso() {
   const L = [];
   proximosCobros(8).forEach(p => L.push({f: ymd(p.desde), t: "cobrás la " + cobroTitulo(p), c: "Ya podés estar cobrando: " + (p.desde.getTime() === p.hasta.getTime() ? "se paga el " + fechaLarga(p.desde) : "entre el " + fechaLarga(p.desde) + " y el " + fechaLarga(p.hasta)) + "."}));
   proximosCierres(8).forEach(c => L.push({f: ymd(c.fecha), t: "cierra la " + cobroTitulo(c), c: "Revisá que tus horas y novedades estén cargadas."}));
-  proximosFeriados(10).filter(f => f.fecha.getDay() !== 0 && f.fecha.getDay() !== 6).forEach(f => L.push({f: ymd(f.fecha), t: "es feriado", av: [7, 3, 1], c: fechaLarga(f.fecha).replace(/^./, x => x.toUpperCase()) + ". Aprovechá ese día: si trabajás, se cobra al 100%."}));
+  proximosFeriados(10).filter(f => f.fecha.getDay() !== 0 && f.fecha.getDay() !== 6).forEach(f => L.push({f: ymd(f.fecha), t: "es feriado", av: [7, 3, 1], c: fechaLarga(f.fecha).replace(/^./, x => x.toUpperCase()) + ". Aprovechá ese día: " + (g => g ? "si trabajás las " + g.hs + " hs, sumás unos $" + fmtN(g.neto) + " netos." : "si trabajás, se cobra al 100%.")(ganaFeriado(f.fecha))}));
   return L;
 }
 async function mandarAvisos() {
@@ -3670,13 +3698,13 @@ if (/android/i.test(navigator.userAgent) && !esApp() && !instOculto()) {   // Br
     novedades(pend);
   } catch (e) {} }, 2500);
 
-  // ----- recordatorio suave: hace más de un mes que no guardás una copia en archivo -----
+  // ----- recordatorio suave: pasaron más de 15 días (o nunca) y hay datos nuevos sin guardar en archivo -----
   setTimeout(() => { try {
     if (document.getElementById("avisoUpd") || document.getElementById("modalNov") || !Object.keys(S.hist || {}).length) return;
     const dias = (SY.ult ? Date.now() - SY.ult : Infinity) / 864e5;
-    if (dias <= 30 || Date.now() - (+localStorage.getItem(K_REC) || 0) < 3 * 864e5) return;
+    if (dias <= 15 || (SY.ult && !SY.mod) || Date.now() - (+localStorage.getItem(K_REC) || 0) < 3 * 864e5) return;   // si nada cambió desde la última copia, no molesta
     localStorage.setItem(K_REC, String(Date.now()));
-    barra("avisoCopia", SY.ult ? "Hace más de un mes que no guardás una copia en archivo" : "Todavía no guardaste una copia en archivo",
+    barra("avisoCopia", SY.ult ? "Hace más de 15 días que no guardás una copia en archivo" : "Todavía no guardaste una copia en archivo",
       "Guardala por si perdés el celu o los datos del navegador.",
       [["Después", (x, b) => b.remove()], ["Guardar ahora", (x, b) => { b.remove(); $("syGuardar").click(); }, true]]);
   } catch (e) {} }, 6000);

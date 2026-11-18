@@ -1,10 +1,13 @@
 /* ÚNICO lugar donde cambiás la versión de Mi Recibo.
    Para publicar algo nuevo: cambiá APP_VERSION (por ejemplo "2.3.1") y escribí en APP_NOVEDADES una línea de qué cambió.
    Subí este archivo junto con index.html y sw.js. Lo leen la página y el service worker, y el aviso de actualización muestra las novedades. */
-self.APP_VERSION = "2.3.5";
-self.APP_NOVEDADES = "Los avisos de feriado ahora llegan 7, 3 y 1 día antes, con el recordatorio de que ese día se cobra al 100%.";
+self.APP_VERSION = "2.3.8";
+self.APP_NOVEDADES = "El aviso de feriado ahora dice cuánto sumás de neto si trabajás ese día. El recordatorio de copia de seguridad salta a los 15 días y solo si hay datos nuevos sin guardar. Se sumaron pruebas automáticas del cálculo y de los avisos.";
 /* Lista de novedades, de la más nueva a la más vieja: [versión, qué cambió]. Al publicar algo nuevo, agregá arriba una línea con la nueva versión. */
 self.APP_HISTORIAL = [
+  ["2.3.8", "El aviso de feriado ahora dice cuánto sumás de neto si trabajás ese día. El recordatorio de copia de seguridad salta a los 15 días y solo si hay datos nuevos sin guardar. Se sumaron pruebas automáticas del cálculo y de los avisos."],
+  ["2.3.7", "La pantalla de carga ya no espera al evento «load» y la app abre con la copia guardada si internet tarda más de 1,5 segundos. Abajo de todo se ve cuánto tardó la última apertura."],
+  ["2.3.6", "Arranque más firme en el celu: si la señal es mala y la app tarda más de 4 segundos en conseguir lo último, abre con la copia guardada, y si algo se traba te avisa en la pantalla de carga."],
   ["2.3.5", "Los avisos de feriado ahora llegan 7, 3 y 1 día antes, con el recordatorio de que ese día se cobra al 100%."],
   ["2.3.4", "Aviso de feriados: en «Cuándo cobrás» sale un mensaje para aprovechar el próximo feriado (se cobra al 100%), y el celu te avisa el día antes y el mismo día."],
   ["2.3.3", "Ahora «Cuándo cobrás» muestra los próximos feriados con los días que faltan (los de la app, los de internet y los que cargaste vos)."],

@@ -1,0 +1,6 @@
+{
+  "name": "calculadora-sueldo",
+  "private": true,
+  "description": "Mi Recibo: calculadora de sueldo",
+  "scripts": { "test": "node --test \"tests/*.test.js\"" }
+}

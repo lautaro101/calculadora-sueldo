@@ -21,10 +21,14 @@ self.addEventListener("fetch", e => {
   if (u.origin !== location.origin) return;            // Google, Microsoft y demás: no se tocan
   if (r.mode === "navigate" || fresco(u)) {             // la página y version.js: primero internet (revalidando), y si no hay, la guardada
     const clave = r.mode === "navigate" ? "./" : r;
-    e.respondWith(fetch(new Request(r, {cache: "no-cache"})).then(res => {
+    // primero internet, pero con tope: si en 1,5 segundos no respondió (señal mala), se abre con la copia guardada y la red sigue por detrás actualizándola
+    const red = fetch(new Request(r, {cache: "no-cache"})).then(res => {
       if (res.ok) { const cp = res.clone(); caches.open(V).then(c => c.put(clave, cp)); }
       return res;
-    }).catch(() => caches.match(clave)));
+    });
+    const lenta = new Promise(ok => setTimeout(() => ok(null), 1500));
+    e.waitUntil(red.catch(() => {}));
+    e.respondWith(Promise.race([red.catch(() => null), lenta]).then(res => res || caches.match(clave).then(hit => hit || red)));
     return;
   }
   e.respondWith(caches.match(r).then(hit => hit || fetch(r).then(res => {   // el resto: lo guardado, y si no, internet
