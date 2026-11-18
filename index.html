@@ -480,14 +480,14 @@ try {   // si la app cambió de versión (por ejemplo se actualizó sola), se gu
     function btn(txt, fn) { var b = document.createElement("button"); b.type = "button"; b.textContent = txt; b.style.cssText = "display:block;width:100%;margin:8px 0;padding:14px;font:600 16px system-ui;border:0;border-radius:10px;background:#1c3556;color:#fff"; b.onclick = fn; return b; }
     function limpiarCache() {
       var q = [];
-      try { if (navigator.serviceWorker) q.push(navigator.serviceWorker.getRegistrations().then(function (r) { return Promise.all(r.map(function (x) { return x.unregister(); })); })); } catch (e) {}
-      try { if (window.caches) q.push(caches.keys().then(function (k) { return Promise.all(k.map(function (x) { return caches.delete(x); })); })); } catch (e) {}
+      try { if (navigator.serviceWorker) q.push(navigator.serviceWorker.getRegistrations().then(function (r) { var mio = new URL("./", location.href).href; return Promise.all(r.filter(function (x) { return x.scope === mio; }).map(function (x) { return x.unregister(); })); })); } catch (e) {}
+      try { if (window.caches) q.push(caches.keys().then(function (k) { return Promise.all(k.filter(function (x) { return /^(mi-recibo-|calc-)/.test(x); }).map(function (x) { return caches.delete(x); })); })); } catch (e) {}
       return Promise.all(q).catch(function () {});
     }
     d.appendChild(h); d.appendChild(t);
     d.appendChild(btn("1. Reintentar", function () { location.reload(); }));
     d.appendChild(btn("2. Limpiar la copia guardada de la app y reintentar", function () { limpiarCache().then(function () { location.reload(); }); }));
-    d.appendChild(btn("3. Borrar mis datos y empezar de cero", function () { if (!confirm("Se borran perfiles e historial de este celular. ¿Seguro?")) return; try { localStorage.clear(); } catch (e) {} limpiarCache().then(function () { location.reload(); }); }));
+    d.appendChild(btn("3. Borrar mis datos y empezar de cero", function () { if (!confirm("Se borran perfiles e historial de este celular. ¿Seguro?")) return; try { Object.keys(localStorage).filter(function (k) { return /^(calc_sueldo_|mr_)/.test(k); }).forEach(function (k) { localStorage.removeItem(k); }); } catch (e) {} limpiarCache().then(function () { location.reload(); }); }));
     d.appendChild(pre);
     (document.body || document.documentElement).appendChild(d);
   }
@@ -3574,7 +3574,7 @@ if (/android/i.test(navigator.userAgent) && !esApp() && !instOculto()) {   // Br
       bt.onclick = () => {
         if (!confirm("Se reemplazan tus datos actuales por la copia del " + fmtF(c.t) + ". Antes se guarda una copia de lo que tenés ahora. ¿Seguro?")) return;
         window.mrCopia("antes de restaurar", window.APP_VERSION);
-        try { Object.keys(c.d).forEach(k => localStorage.setItem(k, c.d[k])); } catch (e) { alert("No se pudo restaurar la copia."); return; }
+        try { Object.keys(c.d).filter(k => /^calc_sueldo_/.test(k)).forEach(k => localStorage.setItem(k, c.d[k])); } catch (e) { alert("No se pudo restaurar la copia."); return; }
         location.reload();
       };
       r.appendChild(s); r.appendChild(bt); box.appendChild(r);
@@ -3634,7 +3634,7 @@ if (/android/i.test(navigator.userAgent) && !esApp() && !instOculto()) {   // Br
   })().finally(() => { buscando = null; }));
 
   if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
-    navigator.serviceWorker.register("sw.js", {updateViaCache: "none"}).then(reg => {
+    navigator.serviceWorker.register("sw.js", {scope: "./", updateViaCache: "none"}).then(reg => {
       REG = reg;
       reg.addEventListener("updatefound", () => {
         const nw = reg.installing; if (!nw) return;
